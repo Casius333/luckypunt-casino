@@ -1,105 +1,111 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { processDeposit, processWithdrawal } from '@/lib/wallet'
 import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function CashierPage() {
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit')
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
+  const supabase = createClientComponentClient()
 
-  const handleTransaction = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUserId(user.id)
+      } else {
+        router.push('/login')
+      }
+    }
+    getUser()
+  }, [router, supabase])
+
+  const handleTransaction = async () => {
+    if (!userId) {
+      setError('Please log in first')
+      return
+    }
+
+    const numAmount = parseFloat(amount)
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+
     setIsLoading(true)
+    setError(null)
 
     try {
-      const numAmount = parseFloat(amount)
-      if (isNaN(numAmount) || numAmount <= 0) {
-        throw new Error('Please enter a valid amount')
-      }
-
+      let result
       if (activeTab === 'deposit') {
-        await processDeposit('user_id', numAmount, 'AUD', 'credit_card')
+        result = await processDeposit(numAmount, userId)
       } else {
-        await processWithdrawal('user_id', numAmount, 'AUD', 'bank_transfer')
+        result = await processWithdrawal(numAmount, userId)
       }
 
-      router.refresh()
-      setAmount('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Transaction failed')
+      if (result.success) {
+        setAmount('')
+        // Optionally refresh the page or update the balance
+      } else {
+        setError(result.message)
+      }
+    } catch {
+      setError('Transaction failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="bg-white/5 rounded-lg p-6">
-        <div className="flex mb-6">
+    <div className="container mx-auto p-4">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <div className="flex mb-4">
           <button
-            className={`flex-1 py-2 text-center rounded-l-lg ${
-              activeTab === 'deposit'
-                ? 'bg-purple-600 text-white'
-                : 'bg-white/5 text-gray-400'
-            }`}
+            className={`flex-1 py-2 px-4 text-center ${activeTab === 'deposit' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
             onClick={() => setActiveTab('deposit')}
           >
             Deposit
           </button>
           <button
-            className={`flex-1 py-2 text-center rounded-r-lg ${
-              activeTab === 'withdraw'
-                ? 'bg-purple-600 text-white'
-                : 'bg-white/5 text-gray-400'
-            }`}
+            className={`flex-1 py-2 px-4 text-center ${activeTab === 'withdraw' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
             onClick={() => setActiveTab('withdraw')}
           >
             Withdraw
           </button>
         </div>
 
-        <form onSubmit={handleTransaction} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Amount (AUD)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full p-2 bg-white/5 border border-white/10 rounded text-white"
-              placeholder="Enter amount"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-sm">{error}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isLoading ? 'Processing...' : activeTab === 'deposit' ? 'Deposit' : 'Withdraw'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-sm text-gray-400">
-          <h3 className="font-medium text-white mb-2">Important Information:</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Minimum {activeTab}: $10</li>
-            <li>Maximum {activeTab}: $10,000</li>
-            <li>Processing time: Instant for deposits, 1-3 business days for withdrawals</li>
-            <li>Please ensure all details are correct before submitting</li>
-          </ul>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Amount
+          </label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="Enter amount"
+          />
         </div>
+
+        {error && (
+          <div className="mb-4 text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleTransaction}
+          disabled={isLoading}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+        >
+          {isLoading ? 'Processing...' : activeTab === 'deposit' ? 'Deposit' : 'Withdraw'}
+        </button>
       </div>
     </div>
   )
