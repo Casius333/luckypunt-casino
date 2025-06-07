@@ -1,13 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter } from 'next/navigation'
 
 export default function AuthButton() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const supabase = createClientComponentClient()
+  const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +26,7 @@ export default function AuthButton() {
     })
 
     if (error) setError(error.message)
+    else router.refresh()
     setLoading(false)
   }
 
@@ -37,6 +41,7 @@ export default function AuthButton() {
     })
 
     if (error) setError(error.message)
+    else router.refresh()
     setLoading(false)
   }
 

@@ -1,0 +1,64 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+
+export async function POST(request: Request) {
+  try {
+    const { amount } = await request.json()
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    // Get user's wallet
+    const { data: wallet, error: walletError } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (walletError) {
+      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    }
+
+    // Create transaction record
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        wallet_id: wallet.id,
+        type: 'deposit',
+        amount: amount,
+        currency: 'AUD',
+        status: 'completed',
+        metadata: { method: 'direct' }
+      })
+
+    if (transactionError) {
+      return NextResponse.json({ error: 'Transaction failed' }, { status: 500 })
+    }
+
+    // Update wallet balance
+    const { error: updateError } = await supabase.rpc(
+      'update_wallet_balance',
+      { 
+        p_wallet_id: wallet.id,
+        p_amount: amount,
+        p_type: 'deposit'
+      }
+    )
+
+    if (updateError) {
+      return NextResponse.json({ error: 'Balance update failed' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Deposit error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+} 
