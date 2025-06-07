@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   Users,
   Wallet,
@@ -23,6 +23,7 @@ export default function AdminDashboard() {
     activeGames: 0,
     pendingWithdrawals: 0
   })
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
     fetchDashboardStats()

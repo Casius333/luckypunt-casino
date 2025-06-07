@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Link from 'next/link'
 import {
   Users,
@@ -30,6 +30,7 @@ export default function AdminLayout({
 }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const router = useRouter()
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
     checkAdminStatus()

@@ -57,9 +57,9 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(next, requestUrl.origin))
     }
 
-    return NextResponse.redirect(new URL('/', requestUrl.origin))
+    return NextResponse.redirect(new URL('/', request.url))
   } catch (error) {
     console.error('Callback route error:', error)
-    return NextResponse.redirect(new URL('/', requestUrl.origin))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 } 
