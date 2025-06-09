@@ -47,6 +47,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           password,
         })
         if (error) throw error
+        
+        // Ensure wallet exists using the secure API endpoint
+        const response = await fetch('/api/wallet/ensure', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (!response.ok) {
+          console.error('Failed to ensure wallet exists:', await response.text())
+        }
+        
         toast.success('Signed in successfully!')
       } else {
         const { error } = await supabase.auth.signUp({
