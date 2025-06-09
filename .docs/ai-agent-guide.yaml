@@ -1,0 +1,90 @@
+project_name: "LuckyPunt Casino"
+version: "0.1.0"
+last_updated: "2024-06-01"
+
+infrastructure:
+  vps:
+    os: "Ubuntu 24.10"
+    ip: "209.38.93.166"
+    deployment_path: "/var/www/luckypunt-casino"
+    port: 3333
+  
+  repository:
+    url: "https://github.com/Casius333/luckypunt-casino.git"
+    branch: "main"
+
+tech_stack:
+  framework: 
+    name: "Next.js"
+    version: "15.3.3"
+    features:
+      - "Turbopack enabled"
+      - "Development mode active"
+      - "Running on port 3333"
+  
+  database:
+    type: "Supabase"
+    project_id: "lexsfcrpmzgadmbwnrwp"
+    custom_functions:
+      - name: "ensure_user_wallet"
+        purpose: "Handles wallet creation and retrieval"
+        migration_path: "supabase/migrations/20240601_ensure_wallet_function.sql"
+
+environment:
+  required_variables:
+    - NEXT_PUBLIC_SUPABASE_URL
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY
+    - SUPABASE_SERVICE_ROLE_KEY
+    - NEXT_PUBLIC_SITE_URL
+    - DATABASE_URL
+  config_files:
+    local: ".env.local"
+    example: ".env.example"
+    production: "env.production"
+
+deployment:
+  process:
+    - "Development in Cursor (local)"
+    - "Push to GitHub"
+    - "Pull to VPS"
+    - "PM2 manages the application (service: luckypunt-casino)"
+
+known_issues:
+  - description: "Cookies warning in /api/wallet/ensure endpoint"
+    type: "async issue"
+    details: "cookies().get() needs to be awaited"
+    stack_trace: "Error in GoTrueClient.ts and helpers.ts"
+  
+  - description: "Next.js build issues"
+    component: "_not-found page"
+    status: "pending"
+  
+  - description: "Development mode usage"
+    details: "Currently running in development instead of production build"
+    impact: "Performance and security implications"
+
+current_status:
+  application:
+    url: "http://209.38.93.166:3333"
+    status: "running"
+  database:
+    functions: "operational"
+    migrations: "up to date"
+  environment:
+    status: "properly configured"
+  repository:
+    status: "synchronized"
+
+ai_agent_notes:
+  admin_dashboard:
+    - "Project uses Next.js App Router architecture"
+    - "Supabase handles authentication and database"
+    - "Wallet system is integrated with custom database functions"
+    - "Environment variables are critical for proper operation"
+  
+  development_guidelines:
+    - "Always use Turbopack for development"
+    - "Test wallet functionality thoroughly due to known async issues"
+    - "Ensure environment variables are properly set before deployment"
+    - "Follow existing error handling patterns"
+    - "Consider async nature of Supabase auth operations" 
