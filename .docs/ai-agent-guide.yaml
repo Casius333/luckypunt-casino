@@ -87,4 +87,44 @@ ai_agent_notes:
     - "Test wallet functionality thoroughly due to known async issues"
     - "Ensure environment variables are properly set before deployment"
     - "Follow existing error handling patterns"
-    - "Consider async nature of Supabase auth operations" 
+    - "Consider async nature of Supabase auth operations"
+
+architecture_decisions:
+  game_provider_integration:
+    location: "main project (luckypunt-casino)"
+    rationale:
+      - "Direct player-to-game interactions require low latency"
+      - "Game state management belongs with player sessions"
+      - "Wallet transactions need direct access to game events"
+      - "Security best practices for game provider APIs"
+    
+    responsibilities:
+      main_project:
+        - "Game API integrations and endpoints"
+        - "Player session management"
+        - "Real-time game state handling"
+        - "Wallet transaction processing"
+        - "Provider webhooks and callbacks"
+        - "Game-related security measures"
+        path: "/api/games/"
+      
+      admin_dashboard:
+        - "Game provider configuration management"
+        - "Game activation/deactivation controls"
+        - "Performance metrics and analytics"
+        - "Transaction history viewing"
+        - "Risk management settings"
+        - "Compliance reporting tools"
+    
+    data_flow:
+      - "Game configurations stored in Supabase"
+      - "Admin dashboard manages configurations"
+      - "Main project reads configurations for provider connections"
+      - "Game transactions recorded in main project"
+      - "Admin dashboard reads transaction data for reporting"
+
+    scaling_benefits:
+      - "Independent scaling of game servers"
+      - "Separated concerns for better maintenance"
+      - "No proxy overhead for game actions"
+      - "Direct provider-to-game communication" 
