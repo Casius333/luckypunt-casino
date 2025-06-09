@@ -57,7 +57,7 @@ export default function Header() {
 
         {/* Center section - Logo */}
         <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 text-4xl font-bold text-white">
-          LUCKY PUNT
+          LUCKYPUNT.NET
         </Link>
 
         {/* Right section - Auth buttons or User Menu */}

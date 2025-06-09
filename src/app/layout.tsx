@@ -8,7 +8,7 @@ import ModalContainer from "@/components/ModalContainer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Lucky Punt - Online Gaming Platform",
+  title: "LuckyPunt.net - Online Gaming Platform",
   description: "Experience the thrill of online gaming at Lucky Punt",
 };
 
