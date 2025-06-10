@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   async function fetchDashboardStats() {
     // Get total users
     const { count: userCount } = await supabase
-      .from('profiles')
+      .from('players')
       .select('id', { count: 'exact' })
 
     // Get total deposits for today

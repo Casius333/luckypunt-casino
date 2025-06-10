@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     try {
       // Create or update profile first
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('players')
         .upsert({
           id: user.id,
           email: user.email,

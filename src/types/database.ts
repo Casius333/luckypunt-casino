@@ -1,4 +1,4 @@
-export interface Profile {
+export interface Player {
   id: string
   username: string | null
   email: string

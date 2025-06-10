@@ -55,9 +55,9 @@ export async function POST(request: Request) {
     if (!wallet) {
       console.log('Creating new wallet for user:', user.id)
       
-      // Create or update profile first
+      // Create or update player profile first
       const { error: profileError } = await adminClient
-        .from('profiles')
+        .from('players')
         .upsert({
           id: user.id,
           email: user.email,
@@ -65,8 +65,8 @@ export async function POST(request: Request) {
         })
 
       if (profileError) {
-        console.error('Error creating profile:', profileError)
-        return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
+        console.error('Error creating player profile:', profileError)
+        return NextResponse.json({ error: 'Failed to create player profile' }, { status: 500 })
       }
 
       // Create wallet with 0 balance

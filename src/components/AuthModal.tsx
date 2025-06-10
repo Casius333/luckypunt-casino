@@ -23,6 +23,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('')
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true)
+    } else {
+      const timer = setTimeout(() => {
+        setIsVisible(false)
+      }, 200) // Add a small delay to allow for animations
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handleTabSwitch = (event: Event) => {
@@ -34,7 +46,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     return () => tabEvents.removeEventListener('switchTab', handleTabSwitch);
   }, []);
 
-  if (!isOpen) return null
+  if (!isVisible) return null
+
+  const handleClose = () => {
+    console.log('Manual close button clicked')
+    onClose()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,33 +65,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         })
         if (error) throw error
         
-        // Ensure wallet exists using the secure API endpoint
-        const response = await fetch('/api/wallet/ensure', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (!response.ok) {
-          console.error('Failed to ensure wallet exists:', await response.text())
-        }
-        
         toast.success('Signed in successfully!')
+        onClose()
       } else {
-        const { error } = await supabase.auth.signUp({
+        console.log('Starting signup process...')
+        const { error: signUpError, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${location.origin}/auth/callback`,
           },
         })
-        if (error) throw error
-        toast.success('Check your email to complete registration!')
+        
+        if (signUpError) {
+          console.error('Signup error:', signUpError)
+          throw signUpError
+        }
+
+        if (data?.user) {
+          toast.success('Registration successful!')
+          onClose()
+        } else {
+          throw new Error('No user data returned from signup')
+        }
       }
-      onClose()
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      console.error('Auth error:', error)
+      toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -85,27 +102,35 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
       />
       
       {/* Modal Container */}
-      <div className="fixed inset-0 overflow-y-auto">
+      <div 
+        className="fixed inset-0 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+      >
         <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
           <div className="relative w-full max-w-md">
             <div className="relative bg-black border border-gray-800 rounded-lg shadow-2xl">
               {/* Close button */}
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="absolute -right-2 -top-2 bg-gray-900 rounded-full p-1 text-gray-400 hover:text-white transition-colors border border-gray-800"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
 
               <div className="p-6">
                 {/* Tabs */}
-                <div className="flex gap-4 mb-8">
+                <div className="flex gap-4 mb-8" role="tablist">
                   <button
+                    role="tab"
+                    aria-selected={isSignIn}
                     className={`flex-1 py-3 text-center transition-colors ${
                       isSignIn ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'
                     }`}
@@ -114,6 +139,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     Sign In
                   </button>
                   <button
+                    role="tab"
+                    aria-selected={!isSignIn}
                     className={`flex-1 py-3 text-center transition-colors ${
                       !isSignIn ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'
                     }`}
@@ -169,7 +196,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     onClick={() => {/* TODO: Implement forgot password */}}
                     className="mt-4 text-sm text-gray-400 hover:text-white transition-colors"
                   >
-                    Forgot Password?
+                    Forgot password?
                   </button>
                 )}
               </div>

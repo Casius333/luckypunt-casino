@@ -27,16 +27,21 @@ export default function ModalContainer() {
     return () => modalEvents.removeEventListener('showModal', handleShowModal);
   }, []); // Empty dependency array since modalEvents is static
 
+  const handleClose = () => {
+    console.log('Closing modal:', activeModal)
+    setActiveModal(null)
+  }
+
   return (
     <>
       <AuthModal 
         isOpen={activeModal === 'auth'} 
-        onClose={() => setActiveModal(null)} 
+        onClose={handleClose} 
       />
       <CashierModal 
         isOpen={activeModal === 'cashier'} 
-        onClose={() => setActiveModal(null)}
-        onSuccess={() => setActiveModal(null)}
+        onClose={handleClose}
+        onSuccess={handleClose}
       />
     </>
   );

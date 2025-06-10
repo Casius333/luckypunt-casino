@@ -12,54 +12,68 @@ export async function GET(request: Request) {
       const cookieStore = cookies()
       const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
       
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (error) {
-        console.error('Auth callback error:', error)
+      // Exchange code for session
+      const { error: authError } = await supabase.auth.exchangeCodeForSession(code)
+      if (authError) {
+        console.error('Auth callback error:', authError)
         return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin)
+          new URL(`/login?error=${encodeURIComponent(authError.message)}`, requestUrl.origin)
         )
       }
 
-      // After successful confirmation, get the user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Create or update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            username: user.email
-          }, {
-            onConflict: 'id'
-          })
+      // Get the authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        console.error('Failed to get user:', userError)
+        return NextResponse.redirect(
+          new URL(`/login?error=${encodeURIComponent('Failed to get user')}`, requestUrl.origin)
+        )
+      }
 
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
-        }
+      // Create or update player profile
+      const { error: profileError } = await supabase
+        .from('players')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          username: user.email?.split('@')[0] || 'user'
+        }, {
+          onConflict: 'id'
+        })
 
-        // Create wallet if it doesn't exist
-        const { error: walletError } = await supabase
-          .from('wallets')
-          .upsert({
-            user_id: user.id,
-            currency: 'AUD',
-            balance: 0
-          }, {
-            onConflict: 'user_id'
-          })
+      if (profileError) {
+        console.error('Failed to create player profile:', profileError)
+        return NextResponse.redirect(
+          new URL(`/login?error=${encodeURIComponent('Failed to create profile')}`, requestUrl.origin)
+        )
+      }
 
-        if (walletError) {
-          console.error('Error creating wallet:', walletError)
-        }
+      // Create wallet if it doesn't exist
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .upsert({
+          user_id: user.id,
+          currency: 'AUD',
+          balance: 0
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (walletError) {
+        console.error('Failed to create wallet:', walletError)
+        return NextResponse.redirect(
+          new URL(`/login?error=${encodeURIComponent('Failed to create wallet')}`, requestUrl.origin)
+        )
       }
 
       return NextResponse.redirect(new URL(next, requestUrl.origin))
     }
 
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/', requestUrl.origin))
   } catch (error) {
-    console.error('Callback route error:', error)
-    return NextResponse.redirect(new URL('/', request.url))
+    console.error('Auth callback error:', error)
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent('Internal server error')}`, requestUrl.origin)
+    )
   }
 } 
