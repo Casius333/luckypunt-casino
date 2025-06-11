@@ -36,7 +36,7 @@ export async function GET(request: Request) {
         .upsert({
           id: user.id,
           email: user.email,
-          username: user.email?.split('@')[0] || 'user'
+          username: user.email
         }, {
           onConflict: 'id'
         })

@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         .upsert({
           id: user.id,
           email: user.email,
-          username: user.email?.split('@')[0] || 'user'
+          username: user.email
         })
 
       if (profileError) {
