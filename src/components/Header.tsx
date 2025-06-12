@@ -55,7 +55,7 @@ export default function Header() {
             <Link href="/" className="flex items-center">
               <div className="w-[600px] h-[150px] relative">
                 <Image
-                  src="/images/logo.png"
+                  src="/images/Logo.png"
                   alt="LUCKYPUNT.NET"
                   fill
                   className="object-contain"
