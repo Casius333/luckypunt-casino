@@ -3,77 +3,47 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  try {
-    const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get('code')
-    const next = requestUrl.searchParams.get('next') ?? '/'
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
 
-    if (code) {
-      const cookieStore = cookies()
-      const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  if (code) {
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    
+    try {
+      await supabase.auth.exchangeCodeForSession(code)
       
-      // Exchange code for session
-      const { error: authError } = await supabase.auth.exchangeCodeForSession(code)
-      if (authError) {
-        console.error('Auth callback error:', authError)
-        return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent(authError.message)}`, requestUrl.origin)
-        )
-      }
-
-      // Get the authenticated user
+      // Get the user after exchanging the code
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        console.error('Failed to get user:', userError)
+      if (userError) throw userError
+      
+      if (!user) {
+        console.error('No user found after code exchange')
         return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent('Failed to get user')}`, requestUrl.origin)
+          new URL(`/login?error=${encodeURIComponent('Authentication failed')}`, requestUrl.origin)
         )
       }
 
-      // Create or update player profile
-      const { error: profileError } = await supabase
-        .from('players')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          username: user.email
-        }, {
-          onConflict: 'id'
-        })
-
-      if (profileError) {
-        console.error('Failed to create player profile:', profileError)
-        return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent('Failed to create profile')}`, requestUrl.origin)
-        )
-      }
-
-      // Create wallet if it doesn't exist
+      // Ensure wallet exists for the user
       const { error: walletError } = await supabase
-        .from('wallets')
-        .upsert({
-          user_id: user.id,
-          currency: 'AUD',
-          balance: 0
-        }, {
-          onConflict: 'user_id'
-        })
-
+        .rpc('ensure_user_wallet', { user_id: user.id })
+      
       if (walletError) {
-        console.error('Failed to create wallet:', walletError)
-        return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent('Failed to create wallet')}`, requestUrl.origin)
-        )
+        console.error('Wallet creation error:', walletError)
+        // Don't redirect on wallet error, just log it
       }
 
-      return NextResponse.redirect(new URL(next, requestUrl.origin))
+      return NextResponse.redirect(new URL('/', requestUrl.origin))
+    } catch (error) {
+      console.error('Auth callback error:', error)
+      return NextResponse.redirect(
+        new URL(`/login?error=${encodeURIComponent('Internal server error')}`, requestUrl.origin)
+      )
     }
-
-    return NextResponse.redirect(new URL('/', requestUrl.origin))
-  } catch (error) {
-    console.error('Auth callback error:', error)
-    return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent('Internal server error')}`, requestUrl.origin)
-    )
   }
+
+  // Return the user to an error page if code is not present
+  return NextResponse.redirect(
+    new URL(`/login?error=${encodeURIComponent('No code in URL')}`, requestUrl.origin)
+  )
 } 
