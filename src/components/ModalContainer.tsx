@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import AuthModal from './AuthModal'
 import CashierModal from './CashierModal'
+import SettingsModal from './SettingsModal'
 
 // Create a simple event system for modal management
-type ModalType = 'auth' | 'cashier' | null;
+type ModalType = 'auth' | 'cashier' | 'settings' | null;
 
 // Create a global event system for modals
 const modalEvents = new EventTarget();
@@ -42,6 +43,10 @@ export default function ModalContainer() {
         isOpen={activeModal === 'cashier'} 
         onClose={handleClose}
         onSuccess={handleClose}
+      />
+      <SettingsModal
+        isOpen={activeModal === 'settings'}
+        onClose={handleClose}
       />
     </>
   );

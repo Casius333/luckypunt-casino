@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Menu, X, Home, Gift, Wallet, Crown, Settings, LogOut } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { showModal } from './ModalContainer'
 
 interface UserMenuProps {
   onCashierClick: () => void
@@ -15,7 +16,7 @@ const menuItems = [
   { label: 'Cashier', icon: Wallet },
   { href: '/promotions', label: 'Promotions', icon: Gift },
   { href: '/vip', label: 'VIP', icon: Crown },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { label: 'Settings', icon: Settings },
 ]
 
 export default function UserMenu({ onCashierClick }: UserMenuProps) {
@@ -56,6 +57,21 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
                       onClick={() => {
                         setIsOpen(false)
                         onCashierClick()
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                    >
+                      <Icon size={18} />
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                }
+                if (item.label === 'Settings') {
+                  return (
+                    <button
+                      key="settings"
+                      onClick={() => {
+                        setIsOpen(false)
+                        showModal('settings')
                       }}
                       className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
                     >
