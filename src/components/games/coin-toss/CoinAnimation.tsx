@@ -1,38 +1,41 @@
 'use client';
 
-import { CoinSide } from '@/types/coin-toss';
 import { useEffect, useState } from 'react';
-
-interface CoinAnimationProps {
-    isFlipping: boolean;
-    result?: CoinSide;
-}
+import { CoinAnimationProps } from '@/types/components';
 
 const CoinAnimation = ({ isFlipping, result }: CoinAnimationProps) => {
     const [showResult, setShowResult] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
         if (isFlipping) {
             setShowResult(false);
-        } else {
-            // Show result after animation
-            const timer = setTimeout(() => {
+            setIsAnimating(true);
+            // Animation duration matches CSS animation
+            const animationTimer = setTimeout(() => {
+                setIsAnimating(false);
+            }, 1500); // Match the CSS animation duration
+
+            return () => clearTimeout(animationTimer);
+        } else if (!isFlipping && result) {
+            // Show result after animation completes
+            const resultTimer = setTimeout(() => {
                 setShowResult(true);
-            }, 1000);
-            return () => clearTimeout(timer);
+            }, 100);
+            return () => clearTimeout(resultTimer);
         }
-    }, [isFlipping]);
+    }, [isFlipping, result]);
 
     return (
         <div className="relative w-48 h-48 mx-auto">
             <div
                 className={`w-full h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 shadow-lg
-                    ${isFlipping ? 'animate-coin-flip' : ''} 
-                    ${!isFlipping && showResult ? 'scale-100' : 'scale-90'}
+                    ${isAnimating ? 'animate-coin-flip' : ''} 
+                    ${!isAnimating && showResult ? 'scale-100' : 'scale-90'}
                     transition-transform duration-300`}
             >
                 <div className="absolute inset-0 flex items-center justify-center text-4xl font-bold text-yellow-800">
-                    {!isFlipping && showResult && result ? (
+                    {!isAnimating && showResult && result ? (
                         result.charAt(0).toUpperCase() + result.slice(1)
                     ) : (
                         '?'

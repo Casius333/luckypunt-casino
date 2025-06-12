@@ -1,13 +1,17 @@
 import Link from 'next/link'
 import { Play } from 'lucide-react'
 
+interface GameGridProps {
+  category: string;
+}
+
 interface Game {
-  id: string
-  title: string
-  provider: string
-  isHot?: boolean
-  isNew?: boolean
-  customComponent?: React.ComponentType
+  id: string;
+  title: string;
+  provider: string;
+  isHot?: boolean;
+  isNew?: boolean;
+  category: string;
 }
 
 const games: Game[] = [
@@ -16,151 +20,174 @@ const games: Game[] = [
     title: 'Coin Toss',
     provider: 'LuckyPunt',
     isNew: true,
-    isHot: true
+    isHot: true,
+    category: 'table'
   },
   {
     id: 'sweet-bonanza',
     title: 'Sweet Bonanza',
     provider: 'Pragmatic Play',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'gates-of-olympus',
     title: 'Gates of Olympus',
     provider: 'Pragmatic Play',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'fruit-party',
     title: 'Fruit Party',
     provider: 'Pragmatic Play',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'book-of-dead',
     title: 'Book of Dead',
     provider: 'Play\'n GO',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'starburst',
     title: 'Starburst',
     provider: 'NetEnt',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'gonzo-quest',
     title: 'Gonzo\'s Quest',
-    provider: 'NetEnt'
+    provider: 'NetEnt',
+    category: 'slots'
   },
   {
     id: 'big-bass-bonanza',
     title: 'Big Bass Bonanza',
     provider: 'Pragmatic Play',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'wolf-gold',
     title: 'Wolf Gold',
-    provider: 'Pragmatic Play'
+    provider: 'Pragmatic Play',
+    category: 'slots'
   },
   {
     id: 'dog-house',
     title: 'The Dog House',
     provider: 'Pragmatic Play',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'reactoonz',
     title: 'Reactoonz',
     provider: 'Play\'n GO',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'dead-or-alive',
     title: 'Dead or Alive 2',
-    provider: 'NetEnt'
+    provider: 'NetEnt',
+    category: 'slots'
   },
   {
     id: 'money-train',
     title: 'Money Train 2',
     provider: 'Relax Gaming',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'jammin-jars',
     title: 'Jammin\' Jars',
     provider: 'Push Gaming',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'book-of-ra',
     title: 'Book of Ra',
     provider: 'Novomatic',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'buffalo-king',
     title: 'Buffalo King',
-    provider: 'Pragmatic Play'
+    provider: 'Pragmatic Play',
+    category: 'slots'
   },
   {
     id: 'razor-shark',
     title: 'Razor Shark',
     provider: 'Push Gaming',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'wild-west-gold',
     title: 'Wild West Gold',
     provider: 'Pragmatic Play',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'book-of-shadows',
     title: 'Book of Shadows',
-    provider: 'Nolimit City'
+    provider: 'Nolimit City',
+    category: 'slots'
   },
   {
     id: 'fire-joker',
     title: 'Fire Joker',
-    provider: 'Play\'n GO'
+    provider: 'Play\'n GO',
+    category: 'slots'
   },
   {
     id: 'rise-of-olympus',
     title: 'Rise of Olympus',
     provider: 'Play\'n GO',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'moon-princess',
     title: 'Moon Princess',
     provider: 'Play\'n GO',
-    isHot: true
+    isHot: true,
+    category: 'slots'
   },
   {
     id: 'mental',
     title: 'Mental',
     provider: 'Nolimit City',
-    isNew: true
+    isNew: true,
+    category: 'slots'
   },
   {
     id: 'san-quentin',
     title: 'San Quentin',
     provider: 'Nolimit City',
-    isHot: true
-  },
-  {
-    id: 'immortal-romance',
-    title: 'Immortal Romance',
-    provider: 'Microgaming'
+    isHot: true,
+    category: 'slots'
   }
 ].slice(0, 24); // Keep only first 24 games to maintain grid layout
 
-export default function GameGrid() {
+export default function GameGrid({ category = 'all' }: GameGridProps) {
+  const filteredGames = category === 'all' 
+    ? games 
+    : games.filter(game => game.category === category)
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-      {games.map((game) => (
+      {filteredGames.map((game) => (
         <div key={game.id} className="group relative">
           <div className="aspect-[4/3] relative rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
             {game.id === 'coin-toss' ? (

@@ -1,10 +1,7 @@
 'use client';
 
 import { CoinTossRound } from '@/types/coin-toss';
-
-interface CoinTossResultProps {
-    round: CoinTossRound;
-}
+import { CoinTossResultProps } from '@/types/components';
 
 const CoinTossResult = ({ round }: CoinTossResultProps) => {
     return (

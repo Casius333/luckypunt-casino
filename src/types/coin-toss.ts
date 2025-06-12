@@ -17,8 +17,8 @@ export interface CoinTossSession {
 }
 
 export interface CoinTossRound {
-    id: string;
-    session_id: string;
+    id?: string;
+    session_id?: string;
     bet_amount: number;
     player_choice: CoinSide;
     result: CoinSide;
@@ -26,7 +26,7 @@ export interface CoinTossRound {
     payout_amount: number;
     player_balance_before: number;
     player_balance_after: number;
-    created_at: string;
+    created_at?: string;
 }
 
 export interface CoinTossStats {

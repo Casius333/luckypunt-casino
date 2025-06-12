@@ -1,146 +1,103 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import BalanceDisplay from './BalanceDisplay'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import type { User } from '@supabase/auth-helpers-nextjs'
-import { Menu, X } from 'lucide-react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { User } from '@supabase/supabase-js'
+import AuthModal, { switchTab } from './AuthModal'
+import UserMenu from './UserMenu'
 import { showModal } from './ModalContainer'
-import { switchTab } from './AuthModal'
 
 export default function Header() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const supabase = createClientComponentClient()
   const router = useRouter()
+  const supabase = createClientComponentClient()
+  const [user, setUser] = useState<User | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+    supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
-      setLoading(false)
-    }
-    getUser()
-
-    // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase.auth])
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: string, session) => {
+      setUser(session?.user ?? null)
+    })
 
-  const handleAuthClick = (tab: 'signin' | 'signup') => {
-    showModal('auth');
-    switchTab(tab);
-  };
+    return () => subscription.unsubscribe()
+  }, [])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
-    setIsMenuOpen(false)
+  const handleSignIn = () => {
+    setShowAuthModal(true)
+    setTimeout(() => switchTab('signin'), 0)
+  }
+
+  const handleRegister = () => {
+    setShowAuthModal(true)
+    setTimeout(() => switchTab('signup'), 0)
+  }
+
+  const handleCashierClick = () => {
+    showModal('cashier')
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[150] bg-black">
-      <div className="flex items-center justify-between h-24 px-4 max-w-[1920px] mx-auto">
-        {/* Empty left section to maintain spacing */}
-        <div className="w-[200px]" />
-
-        {/* Center section - Logo */}
-        <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 text-4xl font-bold text-white">
-          LUCKYPUNT.NET
-        </Link>
-
-        {/* Right section - Auth buttons or User Menu */}
-        <div className="flex items-center gap-4">
-          {!user ? (
-            <>
-              <button
-                onClick={() => handleAuthClick('signin')}
-                className="px-6 py-2 border border-purple-600 text-white rounded-lg hover:bg-purple-600/10 transition-colors"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => handleAuthClick('signup')}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Register
-              </button>
-            </>
-          ) : (
-            <>
-              <BalanceDisplay />
-              <div className="relative">
+    <>
+      <header className="fixed top-0 left-0 right-0 h-40 bg-black z-[150]">
+        <div className="h-full flex items-center justify-between px-8">
+          <div className="flex-1" />
+          <div className="flex items-center justify-center flex-1">
+            <Link href="/" className="flex items-center">
+              <div className="w-[600px] h-[150px] relative">
+                <Image
+                  src="/images/logo.png"
+                  alt="LUCKYPUNT.NET"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            </Link>
+          </div>
+          <div className="flex items-center gap-4 flex-1 justify-end">
+            {user ? (
+              <>
                 <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  onClick={handleCashierClick}
+                  className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
                 >
-                  <Menu size={24} className="text-white" />
+                  <span className="font-medium">$0.00</span>
+                  <span className="text-sm text-gray-400">AUD</span>
+                </button>
+                <UserMenu onCashierClick={handleCashierClick} />
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleSignIn}
+                  className="text-white hover:text-purple-400 transition-colors"
+                >
+                  Sign In
                 </button>
 
-                {/* Dropdown Menu */}
-                {isMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-black border border-white/10 rounded-lg shadow-xl py-1 z-50">
-                    <Link
-                      href="/"
-                      className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Home
-                    </Link>
-                    <button
-                      onClick={() => {
-                        showModal('cashier')
-                        setIsMenuOpen(false)
-                      }}
-                      className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                    >
-                      Cashier
-                    </button>
-                    <Link
-                      href="/promotions"
-                      className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Promotions
-                    </Link>
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/vip"
-                      className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      VIP
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+                <button
+                  onClick={handleRegister}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Register
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
+    </>
   )
 } 

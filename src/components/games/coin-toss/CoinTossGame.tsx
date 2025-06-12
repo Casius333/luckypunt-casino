@@ -1,249 +1,133 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useUser } from '@/hooks/useUser';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { CoinTossSession, CoinTossRound, CoinSide } from '@/types/coin-toss';
-import CoinTossControls from './CoinTossControls';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
+import { useWallet } from '@/hooks/useWallet';
+import { formatCurrency } from '@/lib/utils';
+import { CoinSide, CoinTossRound } from '@/types/coin-toss';
 import CoinAnimation from './CoinAnimation';
+import CoinTossControls from './CoinTossControls';
 import CoinTossResult from './CoinTossResult';
-import CoinTossStats from './CoinTossStats';
-import CoinTossHistory from './CoinTossHistory';
+import { toast } from 'react-hot-toast';
 
-const CoinTossGame = () => {
-    const { user } = useUser();
-    const supabase = createClientComponentClient();
-    
-    const [session, setSession] = useState<CoinTossSession | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [currentRound, setCurrentRound] = useState<CoinTossRound | null>(null);
+export default function CoinTossGame() {
+    const router = useRouter();
+    const { wallet, isLoading } = useWallet();
     const [isFlipping, setIsFlipping] = useState(false);
-    const [playerBalance, setPlayerBalance] = useState<number>(0);
+    const [error, setError] = useState<string | null>(null);
+    const [result, setResult] = useState<CoinSide | undefined>();
+    const [currentRound, setCurrentRound] = useState<CoinTossRound | null>(null);
+    const balance = wallet?.balance ?? 0;
 
-    // Fetch or create active session on component mount
-    useEffect(() => {
-        if (user) {
-            fetchActiveSession();
-        }
-    }, [user]);
-
-    // Fetch player's wallet balance
-    useEffect(() => {
-        if (user) {
-            fetchPlayerBalance();
-        }
-    }, [user]);
-
-    const fetchPlayerBalance = async () => {
-        const { data: wallet, error } = await supabase
-            .from('wallets')
-            .select('balance')
-            .eq('user_id', user?.id)
-            .single();
-
-        if (error) {
-            setError('Error fetching wallet balance');
-            return;
-        }
-
-        setPlayerBalance(wallet.balance);
+    const handleExit = () => {
+        router.push('/');
     };
 
-    const fetchActiveSession = async () => {
-        setIsLoading(true);
-        setError(null);
-
+    const handlePlay = async (betAmount: number, choice: CoinSide) => {
         try {
-            // Check for existing active session
-            const { data: existingSession, error: sessionError } = await supabase
-                .from('coin_toss_sessions')
-                .select('*')
-                .eq('player_id', user?.id)
-                .eq('status', 'active')
-                .single();
+            setError(null);
+            setIsFlipping(true);
+            setResult(undefined);
+            setCurrentRound(null);
 
-            if (sessionError && sessionError.code !== 'PGRST116') {
-                throw sessionError;
+            // Start animation before API call
+            const response = await fetch('/api/games/coin-toss/play', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ betAmount, choice }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to play game');
             }
 
-            if (existingSession) {
-                setSession(existingSession);
+            // Wait for animation duration (1.5s)
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Update game state with result
+            setResult(data.result);
+            setCurrentRound({
+                bet_amount: betAmount,
+                player_choice: choice,
+                result: data.result,
+                is_win: data.isWin,
+                payout_amount: data.payout,
+                player_balance_before: balance,
+                player_balance_after: data.newBalance
+            });
+
+            // Show toast notification
+            if (data.isWin) {
+                toast.success(`You won $${formatCurrency(data.payout)}!`);
             } else {
-                // Create new session
-                const { data: wallet } = await supabase
-                    .from('wallets')
-                    .select('balance')
-                    .eq('user_id', user?.id)
-                    .single();
-
-                const { data: newSession, error: createError } = await supabase
-                    .from('coin_toss_sessions')
-                    .insert({
-                        player_id: user?.id,
-                        initial_balance: wallet.balance,
-                        total_bets: 0,
-                        total_wins: 0,
-                        total_losses: 0,
-                        net_profit_loss: 0
-                    })
-                    .select()
-                    .single();
-
-                if (createError) throw createError;
-                setSession(newSession);
+                toast.error(`You lost $${formatCurrency(betAmount)}`);
             }
-        } catch (err: any) {
-            setError(err.message);
+
+            // Force a UI refresh to ensure balance is updated
+            router.refresh();
+        } catch (error) {
+            console.error('Game error:', error);
+            setError(error instanceof Error ? error.message : 'Failed to play game');
+            setIsFlipping(false);
+            toast.error('Failed to play game');
         } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const playRound = async (betAmount: number, choice: CoinSide) => {
-        if (!session || isFlipping || betAmount > playerBalance) return;
-
-        setIsFlipping(true);
-        setError(null);
-
-        try {
-            // Generate result
-            const result: CoinSide = Math.random() < 0.5 ? 'heads' : 'tails';
-            const isWin = choice === result;
-            const payout = isWin ? betAmount * 2 : 0;
-            
-            // Create round
-            const { data: round, error: roundError } = await supabase
-                .from('coin_toss_rounds')
-                .insert({
-                    session_id: session.id,
-                    bet_amount: betAmount,
-                    player_choice: choice,
-                    result,
-                    is_win: isWin,
-                    payout_amount: payout,
-                    player_balance_before: playerBalance,
-                    player_balance_after: playerBalance - betAmount + payout
-                })
-                .select()
-                .single();
-
-            if (roundError) throw roundError;
-
-            // Update wallet balance
-            const { error: walletError } = await supabase
-                .from('wallets')
-                .update({ balance: round.player_balance_after })
-                .eq('user_id', user?.id);
-
-            if (walletError) throw walletError;
-
-            // Update session stats
-            const { error: sessionError } = await supabase
-                .from('coin_toss_sessions')
-                .update({
-                    total_bets: session.total_bets + 1,
-                    total_wins: session.total_wins + (isWin ? 1 : 0),
-                    total_losses: session.total_losses + (isWin ? 0 : 1),
-                    net_profit_loss: session.net_profit_loss + (isWin ? betAmount : -betAmount)
-                })
-                .eq('id', session.id);
-
-            if (sessionError) throw sessionError;
-
-            setCurrentRound(round);
-            setPlayerBalance(round.player_balance_after);
-            
-            // Update local session state
-            setSession(prev => prev ? {
-                ...prev,
-                total_bets: prev.total_bets + 1,
-                total_wins: prev.total_wins + (isWin ? 1 : 0),
-                total_losses: prev.total_losses + (isWin ? 0 : 1),
-                net_profit_loss: prev.net_profit_loss + (isWin ? betAmount : -betAmount)
-            } : null);
-
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setTimeout(() => {
-                setIsFlipping(false);
-            }, 1500); // Match this with animation duration
-        }
-    };
-
-    const endSession = async () => {
-        if (!session) return;
-
-        try {
-            const { error } = await supabase
-                .from('coin_toss_sessions')
-                .update({
-                    status: 'completed',
-                    end_time: new Date().toISOString(),
-                    final_balance: playerBalance
-                })
-                .eq('id', session.id);
-
-            if (error) throw error;
-            
-            // Start new session
-            fetchActiveSession();
-        } catch (err: any) {
-            setError(err.message);
+            setIsFlipping(false);
         }
     };
 
     if (isLoading) {
-        return <div className="flex items-center justify-center min-h-[400px]">Loading...</div>;
-    }
-
-    if (error) {
-        return <div className="text-red-500 p-4">{error}</div>;
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+        );
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-4 space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Coin Toss</h1>
-                <div className="text-lg">
-                    Balance: ${playerBalance.toFixed(2)}
-                </div>
-            </div>
+        <div className="relative min-h-screen bg-gray-900 text-white p-6">
+            <button
+                onClick={handleExit}
+                className="fixed top-4 right-4 p-2 hover:bg-gray-800 rounded-full transition-colors"
+                title="Exit Game"
+            >
+                <X className="w-6 h-6 text-gray-400 hover:text-white" />
+            </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                    <CoinAnimation 
-                        isFlipping={isFlipping} 
-                        result={currentRound?.result} 
-                    />
-                    <CoinTossControls 
-                        onPlay={playRound}
-                        disabled={isFlipping}
-                        maxBet={playerBalance}
-                    />
-                    {currentRound && (
-                        <CoinTossResult round={currentRound} />
+            <div className="flex flex-col items-center space-y-6">
+                <div className="flex items-center justify-between w-full">
+                    <h1 className="text-2xl font-bold text-white">Coin Toss</h1>
+                    <div className="text-white">
+                        Balance: ${formatCurrency(balance)}
+                    </div>
+                </div>
+                
+                <div className="w-full max-w-md mx-auto">
+                    <CoinAnimation isFlipping={isFlipping} result={result} />
+
+                    {error && (
+                        <div className="mt-4 p-4 bg-red-900/50 text-red-200 rounded-lg text-center">
+                            {error}
+                        </div>
                     )}
-                </div>
 
-                <div className="space-y-6">
-                    {session && (
-                        <>
-                            <CoinTossStats session={session} />
-                            <CoinTossHistory sessionId={session.id} />
-                            <button
-                                onClick={endSession}
-                                className="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
-                            >
-                                End Session
-                            </button>
-                        </>
+                    <CoinTossControls
+                        onPlay={handlePlay}
+                        disabled={isFlipping}
+                        maxBet={balance}
+                    />
+
+                    {currentRound && (
+                        <div className="mt-6">
+                            <CoinTossResult round={currentRound} />
+                        </div>
                     )}
                 </div>
             </div>
         </div>
     );
-};
-
-export default CoinTossGame; 
+} 

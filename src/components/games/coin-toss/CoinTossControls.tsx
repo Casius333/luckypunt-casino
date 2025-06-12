@@ -2,12 +2,7 @@
 
 import { useState } from 'react';
 import { CoinSide } from '@/types/coin-toss';
-
-interface CoinTossControlsProps {
-    onPlay: (betAmount: number, choice: CoinSide) => void;
-    disabled: boolean;
-    maxBet: number;
-}
+import { CoinTossControlsProps } from '@/types/components';
 
 const PRESET_AMOUNTS = [1, 5, 10, 25, 50, 100];
 

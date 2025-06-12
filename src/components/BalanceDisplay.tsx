@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { RealtimeChannel } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
 
 interface DatabaseWallet {
   id: string
@@ -16,10 +17,10 @@ export default function BalanceDisplay() {
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClientComponentClient()
+  const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
-    // Initial fetch of balance
     const fetchBalance = async () => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -59,21 +60,23 @@ export default function BalanceDisplay() {
         // Set up new subscription
         console.log('Setting up new subscription for user:', user.id)
         const channel = supabase
-          .channel('wallet_changes')
+          .channel(`balance_updates_${user.id}`)
           .on(
             'postgres_changes',
             {
-              event: '*',
+              event: 'UPDATE',
               schema: 'public',
               table: 'wallets',
               filter: `user_id=eq.${user.id}`
             },
-            (payload: RealtimePostgresChangesPayload<DatabaseWallet>) => {
+            (payload) => {
               console.log('Received wallet update:', payload)
-              const newWallet = payload.new as DatabaseWallet | null
+              const newWallet = payload.new as DatabaseWallet
               if (newWallet && typeof newWallet.balance === 'number') {
                 console.log('Setting new balance:', newWallet.balance)
                 setBalance(newWallet.balance)
+                // Force a UI refresh
+                router.refresh()
               }
             }
           )
@@ -99,7 +102,7 @@ export default function BalanceDisplay() {
         channelRef.current = null
       }
     }
-  }, [supabase]) // Only re-run if supabase client changes
+  }, [supabase, router]) // Only re-run if supabase client changes
 
   if (loading) return null
 
