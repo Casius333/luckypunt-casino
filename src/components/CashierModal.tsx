@@ -127,7 +127,7 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
       // For deposits, use the test deposit endpoint
       if (isDeposit) {
         console.log('Attempting test deposit:', { amount: numAmount })
-        const response = await fetch('/api/wallet/deposit', {
+        const response = await fetch('/api/wallet/test-deposit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: numAmount })

@@ -9,12 +9,14 @@ import { User } from '@supabase/supabase-js'
 import AuthModal, { switchTab } from './AuthModal'
 import UserMenu from './UserMenu'
 import { showModal } from './ModalContainer'
+import { useWallet } from '@/hooks/useWallet'
 
 export default function Header() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [user, setUser] = useState<User | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const { wallet } = useWallet()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -69,7 +71,7 @@ export default function Header() {
                   onClick={handleCashierClick}
                   className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
                 >
-                  <span className="font-medium">$0.00</span>
+                  <span className="font-medium">${wallet?.balance?.toFixed(2) || '0.00'}</span>
                   <span className="text-sm text-gray-400">AUD</span>
                 </button>
                 <UserMenu onCashierClick={handleCashierClick} />
