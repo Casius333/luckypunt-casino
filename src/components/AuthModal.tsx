@@ -36,14 +36,19 @@ const validatePassword = (password: string): { isValid: boolean; message: string
   return { isValid: true, message: '' };
 };
 
-const validatePhone = (phone: string): { isValid: boolean; message: string } => {
+function validatePhone(phone: string) {
   // Remove any non-digit characters
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length !== 10) {
-    return { isValid: false, message: 'Phone number must be exactly 10 digits' };
+  const cleanPhone = phone.replace(/\D/g, '')
+  
+  // Check if it's a valid Australian mobile number
+  const isValid = /^(?:\+?61|0)[4][0-9]{8}$/.test(cleanPhone)
+  
+  return {
+    isValid: Boolean(isValid),
+    message: isValid ? '' : 'Please enter a valid Australian mobile number',
+    cleanPhone
   }
-  return { isValid: true, message: '' };
-};
+}
 
 const formatPhoneNumber = (input: string): string => {
   // Remove any non-digit characters
@@ -415,7 +420,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <button
                   type="submit"
                   className="flex-1 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={loading || (mobile && !validatePhone(mobile).isValid)}
+                  disabled={Boolean(loading || (mobile && !validatePhone(mobile).isValid))}
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
