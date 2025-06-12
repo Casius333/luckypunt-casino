@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Gamepad2, Dice1, PlaySquare, Trophy, ArrowRight } from 'lucide-react'
 import GameGrid from '@/components/GameGrid'
+import Image from 'next/image'
 
 interface Promotion {
   id: number
@@ -15,10 +16,7 @@ interface Promotion {
 interface Banner {
   id: number
   title: string
-  description?: string
   bgColor: string
-  height: string
-  showButton?: boolean
 }
 
 const promotions: Promotion[] = [
@@ -38,16 +36,17 @@ const banners: Banner[] = [
   {
     id: 1,
     title: "Banner 1",
-    bgColor: "from-emerald-500 to-green-400",
-    height: "h-72",
-    showButton: false
+    bgColor: "bg-emerald-500"
   },
   {
     id: 2,
-    title: "Banner 2",
-    bgColor: "from-emerald-500 to-green-400",
-    height: "h-72",
-    showButton: false
+    title: "Banner 1",
+    bgColor: "bg-blue-500"
+  },
+  {
+    id: 3,
+    title: "Banner 1",
+    bgColor: "bg-purple-500"
   }
 ]
 
@@ -85,6 +84,14 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const router = useRouter()
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length)
+    }, 4000) // Rotate every 4 seconds
+
+    return () => clearInterval(timer)
+  }, [])
+
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % promotions.length)
   }
@@ -97,15 +104,48 @@ export default function Home() {
     ? games 
     : games.filter(game => game.category === activeCategory)
 
+  const nextBanner = () => {
+    setCurrentBanner((prev) => (prev + 1) % banners.length)
+  }
+
+  const prevBanner = () => {
+    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
+  }
+
   return (
     <main>
       {/* Banner section */}
-      <section className="bg-emerald-500 h-[225px] flex items-center px-8">
-        <h2 className="text-6xl font-bold text-white">Banner 1</h2>
+      <section className="relative h-[225px]">
+        {/* Banner slides */}
+        <div className="relative h-full">
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-500 flex items-center px-8 ${banner.bgColor} ${
+                index === currentBanner ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <h2 className="text-6xl font-bold text-white">{banner.title}</h2>
+            </div>
+          ))}
+        </div>
+
+        {/* Dots indicator */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentBanner(index)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                index === currentBanner ? 'bg-white' : 'bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
       </section>
 
       {/* Promotions section */}
-      <section className="bg-red-400 h-[140px] flex items-center justify-between px-8 mt-8">
+      <section className="bg-red-400 h-[119px] flex items-center justify-between px-8 mt-5">
         <h2 className="text-4xl font-bold text-white">Promotion 1</h2>
         <Link 
           href="/promotions" 
