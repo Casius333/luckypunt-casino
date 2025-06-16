@@ -10,23 +10,28 @@ import AuthModal, { switchTab } from './AuthModal'
 import UserMenu from './UserMenu'
 import { showModal } from './ModalContainer'
 import { useWallet } from '@/hooks/useWallet'
+import useUser from '@/hooks/useUser'
 
 export default function Header() {
   const router = useRouter()
   const supabase = createClientComponentClient()
-  const [user, setUser] = useState<User | null>(null)
+  const { user } = useUser()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { wallet } = useWallet()
 
+  // Show a warning if running on an IP address or HTTP
+  const isIpOrHttp = typeof window !== 'undefined' &&
+    (/^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) || window.location.protocol !== 'https:');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
+      // setUser(user)
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event: string, session) => {
-      setUser(session?.user ?? null)
+      // setUser(session?.user ?? null)
     })
 
     return () => subscription.unsubscribe()
@@ -48,6 +53,11 @@ export default function Header() {
 
   return (
     <>
+      {isIpOrHttp && (
+        <div className="w-full bg-yellow-600 text-white text-center py-2 text-xs z-[200]">
+          Warning: You are running on an IP address or non-HTTPS. Login and wallet may not work properly on some devices/browsers. Use a real domain and HTTPS for production.
+        </div>
+      )}
       {/* Mobile Header */}
       <header className="sticky top-0 z-[150] bg-black flex sm:hidden justify-between items-center px-4 py-2 h-16">
         <Link href="/" className="flex items-center">

@@ -13,7 +13,7 @@ interface Wallet {
 }
 
 export function useWallet() {
-    const { user } = useUser();
+    const { user, forceLogout } = useUser();
     const [wallet, setWallet] = useState<Wallet | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const supabase = createClientComponentClient();
@@ -30,7 +30,7 @@ export function useWallet() {
 
             try {
                 // Initial wallet fetch
-                const { data, error } = await supabase
+                const { data, error, status } = await supabase
                     .from('wallets')
                     .select('*')
                     .eq('user_id', user.id)
@@ -38,6 +38,12 @@ export function useWallet() {
 
                 if (error) {
                     console.error('Error fetching wallet:', error);
+                    // If error is 401 (not authenticated), force logout
+                    if (error.code === '401' || status === 401) {
+                        setWallet(null);
+                        if (forceLogout) forceLogout();
+                        return;
+                    }
                     setWallet(null);
                 } else {
                     console.log('Initial wallet data:', data);

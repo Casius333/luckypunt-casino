@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import useUser from '@/hooks/useUser'
 
 interface CashierModalProps {
   isOpen: boolean
@@ -29,6 +30,7 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
   const supabase = createClientComponentClient()
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const { forceLogout } = useUser()
 
   useEffect(() => {
     if (!isOpen) return
@@ -124,7 +126,6 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Please sign in first')
 
-      // For deposits, use the test deposit endpoint
       if (isDeposit) {
         console.log('Attempting test deposit:', { amount: numAmount })
         const response = await fetch('/api/wallet/test-deposit', {
@@ -136,6 +137,12 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
         const data = await response.json()
         console.log('Deposit response:', data)
         
+        if (response.status === 401) {
+          toast.error('Session expired. Please sign in again.')
+          if (forceLogout) forceLogout()
+          return
+        }
+
         if (!response.ok) {
           throw new Error(data.error || 'Deposit failed')
         }
@@ -153,6 +160,12 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
         const data = await response.json()
         console.log('Withdrawal response:', data)
         
+        if (response.status === 401) {
+          toast.error('Session expired. Please sign in again.')
+          if (forceLogout) forceLogout()
+          return
+        }
+
         if (!response.ok) {
           throw new Error(data.error || 'Withdrawal failed')
         }

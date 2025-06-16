@@ -9,13 +9,24 @@ export const useUser = () => {
     const [isLoading, setIsLoading] = useState(true);
     const supabase = createClientComponentClient();
 
+    // Helper to force logout state
+    const forceLogout = () => {
+        setUser(null);
+        setIsLoading(false);
+    };
+
     useEffect(() => {
         const getUser = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 setUser(user);
+                if (!user) {
+                    // If no user, force logout state
+                    forceLogout();
+                }
             } catch (error) {
                 console.error('Error getting user:', error);
+                forceLogout();
             } finally {
                 setIsLoading(false);
             }
@@ -26,6 +37,9 @@ export const useUser = () => {
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
+            if (!session?.user) {
+                forceLogout();
+            }
             setIsLoading(false);
         });
 
@@ -34,7 +48,7 @@ export const useUser = () => {
         };
     }, []);
 
-    return { user, isLoading };
+    return { user, isLoading, forceLogout };
 };
 
 export default useUser; 
