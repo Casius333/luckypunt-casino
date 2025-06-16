@@ -81,7 +81,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-x-hidden">
       {/* Overlay */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
@@ -89,25 +89,25 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-black border border-white/10 rounded-lg shadow-xl p-6 mx-4">
+      <div className="relative w-full max-w-xs sm:max-w-md bg-black border border-white/10 rounded-lg shadow-xl p-4 sm:p-6 mx-2 sm:mx-4 overflow-y-auto">
         {/* Close button */}
         <button 
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
+          className="absolute right-2 top-2 sm:right-4 sm:top-4 text-gray-400 hover:text-white transition-colors min-w-[32px] min-h-[32px]"
         >
           <X size={24} />
         </button>
 
-        <div className="mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <Lock size={20} />
             Settings
           </h2>
         </div>
 
-        <form onSubmit={handlePasswordChange} className="space-y-4">
+        <form onSubmit={handlePasswordChange} className="space-y-3 sm:space-y-4">
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="currentPassword" className="block text-xs sm:text-sm font-medium text-gray-400 mb-1">
               Current Password
             </label>
             <input
@@ -115,14 +115,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               id="currentPassword"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white"
+              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white text-xs sm:text-base"
               required
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="newPassword" className="block text-xs sm:text-sm font-medium text-gray-400 mb-1">
               New Password
             </label>
             <input
@@ -130,14 +130,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               id="newPassword"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white"
+              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white text-xs sm:text-base"
               required
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-gray-400 mb-1">
               Confirm New Password
             </label>
             <input
@@ -145,7 +145,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white"
+              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 text-white text-xs sm:text-base"
               required
               disabled={isLoading}
             />
@@ -153,7 +153,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           <button
             type="submit"
-            className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base min-h-[44px]"
             disabled={isLoading || !currentPassword || !newPassword || !confirmPassword}
           >
             {isLoading ? 'Updating...' : 'Update Password'}

@@ -34,7 +34,7 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-white hover:text-purple-400 transition-colors"
+        className="p-2 text-white hover:text-purple-400 transition-colors min-w-[44px] min-h-[44px]"
         aria-label="Toggle menu"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -43,10 +43,10 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/50 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-lg overflow-hidden border border-white/10">
+          <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-lg overflow-hidden border border-white/10 z-50 hidden sm:block">
             <div className="py-1">
               {menuItems.map((item) => {
                 const Icon = item.icon
@@ -58,7 +58,7 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
                         setIsOpen(false)
                         onCashierClick()
                       }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-base min-h-[44px]"
                     >
                       <Icon size={18} />
                       <span>{item.label}</span>
@@ -73,7 +73,7 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
                         setIsOpen(false)
                         showModal('settings')
                       }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-base min-h-[44px]"
                     >
                       <Icon size={18} />
                       <span>{item.label}</span>
@@ -84,7 +84,7 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
                   <Link
                     key={item.href}
                     href={item.href!}
-                    className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-base min-h-[44px]"
                     onClick={() => setIsOpen(false)}
                   >
                     <Icon size={18} />
@@ -96,9 +96,67 @@ export default function UserMenu({ onCashierClick }: UserMenuProps) {
             <div className="border-t border-white/10">
               <button
                 onClick={handleSignOut}
-                className="flex w-full items-center gap-3 px-4 py-2 text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors"
+                className="flex w-full items-center gap-3 px-4 py-2 text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors text-base min-h-[44px]"
               >
                 <LogOut size={18} />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+          {/* Mobile dropdown */}
+          <div className="fixed bottom-0 left-0 right-0 w-full bg-gray-900 rounded-t-lg shadow-2xl border-t border-white/10 z-50 flex flex-col sm:hidden">
+            <div className="py-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                if (item.label === 'Cashier') {
+                  return (
+                    <button
+                      key="cashier"
+                      onClick={() => {
+                        setIsOpen(false)
+                        onCashierClick()
+                      }}
+                      className="flex w-full items-center gap-3 px-6 py-4 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-lg min-h-[48px]"
+                    >
+                      <Icon size={22} />
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                }
+                if (item.label === 'Settings') {
+                  return (
+                    <button
+                      key="settings"
+                      onClick={() => {
+                        setIsOpen(false)
+                        showModal('settings')
+                      }}
+                      className="flex w-full items-center gap-3 px-6 py-4 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-lg min-h-[48px]"
+                    >
+                      <Icon size={22} />
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                }
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href!}
+                    className="flex items-center gap-3 px-6 py-4 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-lg min-h-[48px]"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Icon size={22} />
+                    <span>{item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+            <div className="border-t border-white/10">
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-3 px-6 py-4 text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors text-lg min-h-[48px]"
+              >
+                <LogOut size={22} />
                 <span>Logout</span>
               </button>
             </div>

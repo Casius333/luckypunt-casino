@@ -113,19 +113,19 @@ export default function Home() {
   }
 
   return (
-    <main>
+    <main className="w-full max-w-screen-xl mx-auto px-4 sm:px-6">
       {/* Banner section */}
-      <section className="relative h-[225px]">
+      <section className="relative h-[225px] w-full">
         {/* Banner slides */}
-        <div className="relative h-full">
+        <div className="relative h-full w-full">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 flex items-center px-8 ${banner.bgColor} ${
+              className={`absolute inset-0 transition-opacity duration-500 flex items-center px-4 sm:px-8 ${banner.bgColor} ${
                 index === currentBanner ? 'opacity-100' : 'opacity-0'
               }`}
             >
-              <h2 className="text-6xl font-bold text-white">{banner.title}</h2>
+              <h2 className="text-4xl sm:text-6xl font-bold text-white">{banner.title}</h2>
             </div>
           ))}
         </div>
@@ -145,11 +145,11 @@ export default function Home() {
       </section>
 
       {/* Promotions section */}
-      <section className="bg-red-400 h-[119px] flex items-center justify-between px-8 mt-5">
-        <h2 className="text-4xl font-bold text-white">Promotion 1</h2>
+      <section className="bg-red-400 h-[119px] flex items-center justify-between px-4 sm:px-8 mt-5 w-full">
+        <h2 className="text-2xl sm:text-4xl font-bold text-white">Promotion 1</h2>
         <Link 
           href="/promotions" 
-          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors"
         >
           <span>View Promotions</span>
           <ArrowRight className="w-5 h-5" />
@@ -157,19 +157,19 @@ export default function Home() {
       </section>
 
       {/* Games section */}
-      <section className="px-8 mt-8">
+      <section className="mt-8 w-full">
         {/* Game Categories */}
-        <div className="flex items-center space-x-4 mb-8">
+        <div className="flex items-center space-x-2 sm:space-x-4 mb-8 overflow-x-auto">
           {categories.map(category => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
                 selectedCategory === category.id ? 'bg-purple-600' : 'bg-gray-800'
               }`}
             >
               {category.icon}
-              <span className="text-white">{category.label}</span>
+              <span className="text-white text-sm sm:text-base">{category.label}</span>
             </button>
           ))}
         </div>

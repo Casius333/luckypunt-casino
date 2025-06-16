@@ -186,7 +186,7 @@ export default function GameGrid({ category = 'all' }: GameGridProps) {
     : games.filter(game => game.category === category)
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-4">
       {filteredGames.map((game) => (
         <div key={game.id} className="group relative">
           <div className="aspect-[4/3] relative rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
@@ -194,17 +194,17 @@ export default function GameGrid({ category = 'all' }: GameGridProps) {
               // Special background for Coin Toss
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-600 to-yellow-400">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-yellow-300 border-4 border-yellow-200 shadow-lg flex items-center justify-center">
-                    <span className="text-2xl font-bold text-yellow-800">$</span>
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-yellow-300 border-4 border-yellow-200 shadow-lg flex items-center justify-center">
+                    <span className="text-lg sm:text-2xl font-bold text-yellow-800">$</span>
                   </div>
                 </div>
               </div>
             ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4">
                 <Link
                   href={game.id === 'coin-toss' ? '/games/coin-toss' : `/play/${game.id}`}
-                  className="flex items-center justify-center gap-2 w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-base min-w-[44px] min-h-[44px]"
                 >
                   <Play size={16} />
                   <span>Play Now</span>
@@ -213,17 +213,17 @@ export default function GameGrid({ category = 'all' }: GameGridProps) {
             </div>
           </div>
           
-          <div className="mt-2">
-            <h3 className="font-medium text-white">{game.title}</h3>
-            <p className="text-sm text-gray-400">{game.provider}</p>
+          <div className="mt-2 px-1 sm:px-0">
+            <h3 className="font-medium text-white text-xs sm:text-base truncate">{game.title}</h3>
+            <p className="text-xs sm:text-sm text-gray-400 truncate">{game.provider}</p>
           </div>
           
           <div className="absolute top-2 right-2 flex gap-1">
             {game.isHot && (
-              <span className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">Hot</span>
+              <span className="px-1 py-0.5 text-[10px] sm:text-xs bg-red-500 text-white rounded">Hot</span>
             )}
             {game.isNew && (
-              <span className="px-1.5 py-0.5 text-xs bg-green-500 text-white rounded">New</span>
+              <span className="px-1 py-0.5 text-[10px] sm:text-xs bg-green-500 text-white rounded">New</span>
             )}
           </div>
         </div>

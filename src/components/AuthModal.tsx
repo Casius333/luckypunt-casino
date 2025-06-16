@@ -512,7 +512,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   )
 
   return (
-    <div className="fixed inset-0" style={{ position: 'fixed', zIndex: 9999 }}>
+    <div className="fixed inset-0 z-[9999]">
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
@@ -525,18 +525,21 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         aria-modal="true"
         aria-labelledby="auth-modal-title"
       >
-        <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
-          <div className="relative w-full max-w-md">
+        <div className="flex min-h-full items-center justify-center p-2 sm:p-6">
+          <div className="relative w-full max-w-xs sm:max-w-md">
             <div className="relative bg-black border border-gray-800 rounded-lg shadow-2xl">
               <button
                 onClick={handleClose}
                 className="absolute -right-2 -top-2 bg-gray-900 rounded-full p-1 text-gray-400 hover:text-white transition-colors border border-gray-800"
                 aria-label="Close"
+                style={{ minWidth: 32, minHeight: 32 }}
               >
                 <X size={20} />
               </button>
 
-              {modalContent}
+              <div className="p-4 sm:p-6">
+                {modalContent}
+              </div>
             </div>
           </div>
         </div>
