@@ -24,6 +24,9 @@ export default function Header() {
   const isIpOrHttp = typeof window !== 'undefined' &&
     (/^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) || window.location.protocol !== 'https:');
 
+  // Log every render for confirmation
+  console.log("[UI] Rendered with user:", user, "loading:", loading);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       // setUser(user)
