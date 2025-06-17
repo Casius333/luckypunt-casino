@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { User } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 export const useUser = () => {
     const [user, setUser] = useState<User | null>(null);
@@ -16,31 +17,35 @@ export const useUser = () => {
     };
 
     useEffect(() => {
-        const getUser = async () => {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                setUser(user);
-                if (!user) {
-                    // If no user, force logout state
-                    forceLogout();
-                }
-            } catch (error) {
-                console.error('Error getting user:', error);
-                forceLogout();
-            } finally {
+        const supabase = getSupabaseClient();
+
+        // Defensive check: if getSession() returns null, treat as logged out
+        supabase.auth.getSession().then(({ data, error }) => {
+            if (error) {
+                console.error('Error fetching session:', error);
+                setUser(null);
                 setIsLoading(false);
+                return;
             }
-        };
-
-        getUser();
-
-        // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-            if (!session?.user) {
-                forceLogout();
+            if (!data.session) {
+                console.log('No valid session found, treating as logged out.');
+                setUser(null);
+                setIsLoading(false);
+                // Clear stale state from localStorage
+                localStorage.removeItem('supabase-session');
+                return;
             }
+            setUser(data.session.user);
             setIsLoading(false);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                setUser(null);
+                localStorage.removeItem('supabase-session');
+            } else if (session) {
+                setUser(session.user);
+            }
         });
 
         return () => {
