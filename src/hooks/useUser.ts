@@ -5,15 +5,15 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { User } from '@supabase/auth-helpers-nextjs';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 
-export const useUser = () => {
+export function useUser() {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
     const supabase = createClientComponentClient();
 
     // Helper to force logout state
     const forceLogout = () => {
         setUser(null);
-        setIsLoading(false);
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -24,19 +24,19 @@ export const useUser = () => {
             if (error) {
                 console.error('Error fetching session:', error);
                 setUser(null);
-                setIsLoading(false);
+                setLoading(false);
                 return;
             }
             if (!data.session) {
                 console.log('No valid session found, treating as logged out.');
                 setUser(null);
-                setIsLoading(false);
+                setLoading(false);
                 // Clear stale state from localStorage
                 localStorage.removeItem('supabase-session');
                 return;
             }
             setUser(data.session.user);
-            setIsLoading(false);
+            setLoading(false);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -53,7 +53,7 @@ export const useUser = () => {
         };
     }, []);
 
-    return { user, isLoading, forceLogout };
-};
+    return { user, loading, forceLogout };
+}
 
 export default useUser; 
