@@ -4,6 +4,8 @@ import "./globals.css";
 import Header from "@/components/Header";
 import { Toaster } from 'sonner'
 import ModalContainer from "@/components/ModalContainer";
+import { useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +19,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  useEffect(() => {
+    const supabase = createClientComponentClient();
+    supabase.auth.getSession().then(({ data, error }: { data: any, error: any }) => {
+      console.log('Session check (mobile):', { data, error });
+    });
+  }, []);
+
   return (
     <html lang="en">
       <head>

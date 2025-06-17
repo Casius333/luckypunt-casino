@@ -11,6 +11,7 @@ import UserMenu from './UserMenu'
 import { showModal } from './ModalContainer'
 import { useWallet } from '@/hooks/useWallet'
 import useUser from '@/hooks/useUser'
+import ClientOnly from './ClientOnly'
 
 export default function Header() {
   const router = useRouter()
@@ -53,11 +54,13 @@ export default function Header() {
 
   return (
     <>
-      {isIpOrHttp && (
-        <div className="w-full bg-yellow-600 text-white text-center py-2 text-xs z-[200]">
-          Warning: You are running on an IP address or non-HTTPS. Login and wallet may not work properly on some devices/browsers. Use a real domain and HTTPS for production.
-        </div>
-      )}
+      <ClientOnly>
+        {isIpOrHttp && (
+          <div className="w-full bg-yellow-600 text-white text-center py-2 text-xs z-[200]">
+            Warning: You are running on an IP address or non-HTTPS. Login and wallet may not work properly on some devices/browsers. Use a real domain and HTTPS for production.
+          </div>
+        )}
+      </ClientOnly>
       {/* Mobile Header */}
       <header className="sticky top-0 z-[150] bg-black flex sm:hidden justify-between items-center px-4 py-2 h-16">
         <Link href="/" className="flex items-center">
