@@ -7,17 +7,17 @@ import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
 
 export default function CoinTossPage() {
-    const { user, isLoading } = useUser();
+    const { user, loading } = useUser();
     const router = useRouter();
 
     useEffect(() => {
-        if (!isLoading && !user) {
+        if (!loading && !user) {
             toast.error('Please sign in to play Coin Toss');
             router.push('/');
         }
-    }, [user, isLoading, router]);
+    }, [user, loading, router]);
 
-    if (isLoading) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div>Loading...</div>
