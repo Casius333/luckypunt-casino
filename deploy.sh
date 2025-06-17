@@ -3,10 +3,10 @@
 echo "🚀 Starting deployment..."
 
 # Stop the current PM2 process
-pm2 stop luckypunt
+pm2 stop luckypunt-casino
 
 # Navigate to the application directory
-cd /var/www/luckypunt
+cd /var/www/luckypunt-casino
 
 # Backup the current .env file
 if [ -f .env ]; then
@@ -34,7 +34,7 @@ if [ -f .env.backup ]; then
 fi
 
 # Start the application with PM2
-pm2 restart luckypunt
+pm2 restart luckypunt-casino
 
 # Show the status
 pm2 list
