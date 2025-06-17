@@ -55,13 +55,13 @@ export default function Header() {
     showModal('cashier')
   }
 
-  // If loading, show a loading state or nothing
+  // Defensive: never render logged-in UI unless user !== null and loading === false
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  // If no user, show logged-out UI
-  if (!user) {
+  if (user === null) {
+    // Always show logged-out UI if user is null and loading is false
     return (
       <>
         <ClientOnly>
@@ -85,7 +85,19 @@ export default function Header() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <UserMenu onCashierClick={handleCashierClick} />
+            <button
+              onClick={handleSignIn}
+              className="text-white hover:text-purple-400 transition-colors text-sm md:text-base min-w-[44px] min-h-[44px]"
+            >
+              Sign In
+            </button>
+
+            <button
+              onClick={handleRegister}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 md:px-6 py-2 rounded-lg transition-colors text-sm md:text-base min-w-[44px] min-h-[44px]"
+            >
+              Register
+            </button>
           </div>
         </header>
 
@@ -131,7 +143,7 @@ export default function Header() {
     );
   }
 
-  // If user is valid, show logged-in UI
+  // Only here if user !== null and loading === false
   return (
     <>
       <ClientOnly>
