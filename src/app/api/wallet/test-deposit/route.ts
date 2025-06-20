@@ -1,113 +1,93 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const { amount } = await request.json()
+    const supabase = createRouteHandlerClient({ cookies })
     
-    // Create authenticated client for getting user
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-    // Get authenticated user
+    // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) {
-      console.error('Auth error:', authError)
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-    if (!user) {
-      console.error('No user found')
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    
+    if (authError || !user) {
+      console.log('Auth error:', authError)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     console.log('Processing deposit for user:', user.id)
 
-    // Create admin client for database operations
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        db: {
-          schema: 'public'
-        }
-      }
-    )
-
-    // First try to get the wallet
-    const { data: wallet, error: walletError } = await adminClient
+    // Get current wallet
+    const { data: wallets, error: walletError } = await supabase
       .from('wallets')
       .select('*')
       .eq('user_id', user.id)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-    if (walletError && walletError.code !== 'PGRST116') { // Not found error
-      console.error('Wallet fetch error:', walletError)
+    if (walletError) {
+      console.error('Error fetching wallet:', walletError)
       return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 })
     }
 
-    // If wallet doesn't exist, create profile and wallet
-    if (!wallet) {
-      console.log('Creating new wallet for user:', user.id)
+    let currentWallet = wallets?.[0]
+    let currentBalance = 0
+
+    if (currentWallet) {
+      console.log('Updating existing wallet. Current balance:', currentWallet.balance)
+      currentBalance = currentWallet.balance || 0
       
-      // Create or update player profile first
-      const { error: profileError } = await adminClient
-        .from('players')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          username: user.email
-        })
+      // Update existing wallet
+      const { error: updateError } = await supabase
+        .from('wallets')
+        .update({ balance: currentBalance + 100 })
+        .eq('id', currentWallet.id)
 
-      if (profileError) {
-        console.error('Error creating player profile:', profileError)
-        return NextResponse.json({ error: 'Failed to create player profile' }, { status: 500 })
+      if (updateError) {
+        console.error('Error updating wallet:', updateError)
+        return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 })
       }
-
-      // Create wallet
-      const { data: newWallet, error: createWalletError } = await adminClient
+    } else {
+      // Create new wallet
+      const { error: insertError } = await supabase
         .from('wallets')
         .insert({
           user_id: user.id,
-          currency: 'AUD',
-          balance: amount
+          balance: 100,
+          currency: 'USD'
         })
-        .select()
-        .single()
 
-      if (createWalletError) {
-        console.error('Error creating wallet:', createWalletError)
+      if (insertError) {
+        console.error('Error creating wallet:', insertError)
         return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 })
       }
-
-      console.log('Successfully created wallet with initial balance:', newWallet.balance)
-      return NextResponse.json({ success: true })
     }
 
-    console.log('Updating existing wallet. Current balance:', wallet.balance)
-    
-    // Update existing wallet
-    const { data: updatedWallet, error: updateError } = await adminClient
-      .from('wallets')
-      .update({ balance: wallet.balance + amount })
-      .eq('user_id', user.id)
-      .select()
-      .single()
+    // Record transaction
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: 'deposit',
+        amount: 100,
+        description: 'Test deposit',
+        status: 'completed'
+      })
 
-    if (updateError) {
-      console.error('Error updating wallet:', updateError)
-      return NextResponse.json({ error: 'Failed to update balance' }, { status: 500 })
+    if (transactionError) {
+      console.error('Error recording transaction:', transactionError)
+      // Don't fail the request, just log the error
     }
 
-    console.log('Successfully updated wallet. New balance:', updatedWallet.balance)
-    return NextResponse.json({ success: true })
+    console.log('Successfully updated wallet. New balance:', currentBalance + 100)
+
+    return NextResponse.json({ 
+      success: true, 
+      newBalance: currentBalance + 100,
+      message: 'Test deposit processed successfully'
+    })
+
   } catch (error) {
-    console.error('Test deposit error:', error)
+    console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

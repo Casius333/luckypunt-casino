@@ -2,20 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
-import { formatCurrency } from '@/lib/utils';
 import { CoinSide, CoinTossRound } from '@/types/coin-toss';
 import CoinAnimation from './CoinAnimation';
 import CoinTossControls from './CoinTossControls';
 import CoinTossResult from './CoinTossResult';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { X, Wallet } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function CoinTossGame() {
     const router = useRouter();
-    const { wallet, isLoading } = useWallet();
+    const { wallet, loading, refetch: refetchWallet } = useWallet();
     const [isFlipping, setIsFlipping] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<CoinSide | undefined>();
     const [currentRound, setCurrentRound] = useState<CoinTossRound | null>(null);
     const balance = wallet?.balance ?? 0;
@@ -26,17 +26,13 @@ export default function CoinTossGame() {
 
     const handlePlay = async (betAmount: number, choice: CoinSide) => {
         try {
-            setError(null);
             setIsFlipping(true);
             setResult(undefined);
             setCurrentRound(null);
 
-            // Start animation before API call
             const response = await fetch('/api/games/coin-toss/play', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ betAmount, choice }),
             });
 
@@ -45,11 +41,9 @@ export default function CoinTossGame() {
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to play game');
             }
-
-            // Wait for animation duration (1.5s)
+            
             await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Update game state with result
+            
             setResult(data.result);
             setCurrentRound({
                 bet_amount: betAmount,
@@ -60,74 +54,60 @@ export default function CoinTossGame() {
                 player_balance_before: balance,
                 player_balance_after: data.newBalance
             });
-
-            // Show toast notification
+            
             if (data.isWin) {
-                toast.success(`You won $${formatCurrency(data.payout)}!`);
+                toast.success(`You won $${data.payout.toFixed(2)}!`);
             } else {
-                toast.error(`You lost $${formatCurrency(betAmount)}`);
+                toast.error(`You lost $${betAmount.toFixed(2)}`);
             }
 
-            // Force a UI refresh to ensure balance is updated
-            router.refresh();
+            refetchWallet();
         } catch (error) {
-            console.error('Game error:', error);
-            setError(error instanceof Error ? error.message : 'Failed to play game');
-            setIsFlipping(false);
-            toast.error('Failed to play game');
+            toast.error(error instanceof Error ? error.message : 'Failed to play game');
         } finally {
             setIsFlipping(false);
         }
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     return (
-        <div className="relative min-h-screen bg-gray-900 text-white p-6">
-            <button
-                onClick={handleExit}
-                className="fixed top-4 right-4 p-2 hover:bg-gray-800 rounded-full transition-colors"
-                title="Exit Game"
-            >
-                <X className="w-6 h-6 text-gray-400 hover:text-white" />
-            </button>
-
-            <div className="flex flex-col items-center space-y-6">
-                <div className="flex items-center justify-between w-full">
-                    <h1 className="text-2xl font-bold text-white">Coin Toss</h1>
-                    <div className="text-white">
-                        Balance: ${formatCurrency(balance)}
+        <div className="container mx-auto max-w-4xl py-8">
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Coin Toss</CardTitle>
+                        <Button variant="ghost" size="icon" onClick={handleExit}>
+                            <X className="w-6 h-6" />
+                        </Button>
                     </div>
-                </div>
-                
-                <div className="w-full max-w-md mx-auto">
-                    <CoinAnimation isFlipping={isFlipping} result={result} />
-
-                    {error && (
-                        <div className="mt-4 p-4 bg-red-900/50 text-red-200 rounded-lg text-center">
-                            {error}
-                        </div>
-                    )}
-
-                    <CoinTossControls
-                        onPlay={handlePlay}
-                        disabled={isFlipping}
-                        maxBet={balance}
-                    />
-
-                    {currentRound && (
-                        <div className="mt-6">
+                    <CardDescription className="flex items-center gap-2 pt-2">
+                        <Wallet className="w-4 h-4" />
+                        Balance: ${balance.toFixed(2)}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <CoinAnimation isFlipping={isFlipping} result={result} />
+                    </div>
+                    <div className="space-y-4">
+                        <CoinTossControls
+                            onPlay={handlePlay}
+                            disabled={isFlipping}
+                            maxBet={balance}
+                        />
+                        {currentRound && (
                             <CoinTossResult round={currentRound} />
-                        </div>
-                    )}
-                </div>
-            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 } 

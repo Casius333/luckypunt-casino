@@ -65,22 +65,21 @@ export async function middleware(req: NextRequest) {
   try {
     // Optional: Rate limiting check
     const path = req.nextUrl.pathname
-    console.log('Rate limit check for path:', path, 'isAuth:', false)
-
-    // Refresh session if exists, ignore if not
-    try {
-      await supabase.auth.getSession()
-    } catch (error) {
-      // Ignore auth errors - just means user isn't logged in
-      console.log('Auth check failed, continuing as anonymous user')
+    console.log(`Rate limit check for path: ${path} isAuth: ${!!(await supabase.auth.getUser()).data.user}`)
+    
+    // Refresh session if expired - required for Server Components
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // Optional: Redirect unauthenticated users from protected routes
+    if (!session && path.startsWith('/api/protected')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    return res
+    
   } catch (error) {
     console.error('Middleware error:', error)
-    // Always return a response, even if there's an error
-    return res
   }
+
+  return res
 }
 
 // Specify which paths should be protected by the middleware
@@ -91,8 +90,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 } 

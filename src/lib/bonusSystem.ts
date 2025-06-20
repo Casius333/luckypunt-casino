@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabaseClient';
+import { createClient } from './supabase/client';
 
 export interface Promotion {
   id: string;
@@ -50,7 +50,7 @@ export interface WalletBalance {
  * Get available promotions for a user
  */
 export async function getAvailablePromotions(userId: string): Promise<Promotion[]> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   const { data: promotions, error } = await supabase
     .from('promotions')
@@ -71,7 +71,7 @@ export async function getAvailablePromotions(userId: string): Promise<Promotion[
  * Get user's active promotions
  */
 export async function getUserActivePromotions(userId: string): Promise<UserPromotion[]> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   const { data: userPromotions, error } = await supabase
     .from('user_promotions')
@@ -95,7 +95,7 @@ export async function getUserActivePromotions(userId: string): Promise<UserPromo
  * Activate a promotion for a user
  */
 export async function activatePromotion(userId: string, promotionId: string, depositAmount?: number): Promise<UserPromotion> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get the promotion details
   const { data: promotion, error: promoError } = await supabase
@@ -175,7 +175,7 @@ export async function activatePromotion(userId: string, promotionId: string, dep
  * Add bonus funds to user's wallet
  */
 async function addBonusToWallet(userId: string, bonusAmount: number): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get current wallet
   const { data: wallet, error: walletError } = await supabase
@@ -221,7 +221,7 @@ async function addBonusToWallet(userId: string, bonusAmount: number): Promise<vo
  * Get user's wallet balance breakdown (real vs bonus)
  */
 export async function getWalletBalance(userId: string): Promise<WalletBalance> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get wallet
   const { data: wallet, error: walletError } = await supabase
@@ -270,7 +270,7 @@ export async function processBet(userId: string, gameId: string, betAmount: numb
   newBalance: number;
   wageringProgress?: number;
 }> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get user's wallet
   const { data: wallet, error: walletError } = await supabase
@@ -358,7 +358,7 @@ export async function processBet(userId: string, gameId: string, betAmount: numb
  * Check if any promotions are completed and convert bonus to real funds
  */
 export async function checkAndCompletePromotions(userId: string): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get active promotions that might be completed
   const { data: activePromotions, error: promoError } = await supabase
@@ -399,7 +399,7 @@ export async function checkAndCompletePromotions(userId: string): Promise<void> 
  * Cancel/forfeit a promotion
  */
 export async function cancelPromotion(userId: string, userPromotionId: string): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get the user promotion
   const { data: userPromotion, error: fetchError } = await supabase
@@ -439,7 +439,7 @@ export async function cancelPromotion(userId: string, userPromotionId: string): 
  * Remove bonus funds from user's wallet
  */
 async function removeBonusFromWallet(userId: string, bonusAmount: number): Promise<void> {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   
   // Get current wallet
   const { data: wallet, error: walletError } = await supabase

@@ -4,7 +4,6 @@ import "./globals.css";
 import Header from "@/components/Header";
 import { Toaster } from 'sonner'
 import ModalContainer from "@/components/ModalContainer";
-import ClientOnlySupabaseDebug from "@/components/ClientOnlySupabaseDebug";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,7 +29,6 @@ export default function RootLayout({
         </main>
         <ModalContainer />
         <Toaster position="bottom-right" theme="dark" />
-        <ClientOnlySupabaseDebug />
       </body>
     </html>
   );
