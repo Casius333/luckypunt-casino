@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Lock } from 'lucide-react'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
+import { X, User, Shield, Bell } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
 import { toast } from 'sonner'
 
 interface SettingsModalProps {
@@ -16,7 +16,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  const supabase = createPagesBrowserClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     const getUser = async () => {
@@ -100,7 +103,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         <div className="mb-4 sm:mb-6">
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-            <Lock size={20} />
+            <User size={20} />
             Settings
           </h2>
         </div>

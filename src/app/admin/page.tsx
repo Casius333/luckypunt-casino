@@ -1,7 +1,7 @@
 'use client'
 
+import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useState } from 'react'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import {
   Users,
   Wallet,
@@ -23,7 +23,10 @@ export default function AdminDashboard() {
     activeGames: 0,
     pendingWithdrawals: 0
   })
-  const supabase = createPagesBrowserClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     fetchDashboardStats()

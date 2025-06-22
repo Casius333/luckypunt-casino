@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X, Home, Gift, Wallet, Crown, Settings, LogOut } from 'lucide-react'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { showModal } from './ModalContainer'
+import { toast } from 'sonner'
 
 interface UserMenuProps {
   onCashierClick: () => void
@@ -21,7 +22,10 @@ const menuItems = [
 
 export default function UserMenu({ onCashierClick }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const supabase = createPagesBrowserClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const router = useRouter()
 
   const handleSignOut = async () => {

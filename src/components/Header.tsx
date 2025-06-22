@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { User } from '@supabase/supabase-js'
 import AuthModal, { switchTab } from './AuthModal'
 import UserMenu from './UserMenu'
@@ -15,31 +14,35 @@ import ClientOnly from './ClientOnly'
 
 export default function Header() {
   const router = useRouter()
-  const supabase = createPagesBrowserClient()
   const { user, loading } = useUser()
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const { wallet } = useWallet()
-
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  
   // Show a warning if running on an IP address or HTTP
   const isIpOrHttp = typeof window !== 'undefined' &&
     (/^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname) || window.location.protocol !== 'https:');
 
-  // Log every render for confirmation
-  console.log("[UI] Rendered with user:", user, "loading:", loading);
-
+  // Log user state changes only when they actually change
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      // setUser(user)
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[UI] Header: User state changed:", {
+        user: user ? { id: user.id, email: user.email } : null,
+        loading
+      });
+    }
+  }, [user?.id, loading]);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: string, session) => {
-      // setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  // Log wallet state changes only when they actually change
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== HEADER WALLET DEBUG ===')
+      console.log('User authenticated:', !!user && !loading)
+      console.log('Wallet object:', wallet ? { id: wallet.id, balance: wallet.balance, bonus_balance: wallet.bonus_balance } : null)
+      console.log('Wallet balance:', wallet?.balance)
+      console.log('Formatted balance:', wallet?.balance?.toFixed(2) || '0.00')
+      console.log('=== END HEADER WALLET DEBUG ===')
+    }
+  }, [user?.id, wallet?.id, wallet?.balance, wallet?.bonus_balance]);
 
   const handleSignIn = () => {
     setShowAuthModal(true)
@@ -205,10 +208,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
     </>
-  )
+  );
 } 

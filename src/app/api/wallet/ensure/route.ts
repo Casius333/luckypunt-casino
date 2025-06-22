@@ -1,21 +1,27 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
 export async function POST(request: Request) {
+  console.log('=== WALLET ENSURE API CALLED ===')
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createServerSupabaseClient()
 
     // Get authenticated user
+    console.log('Getting authenticated user...')
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log('Auth result:', { user: user?.id, error: authError })
+    
     if (authError || !user) {
+      console.error('Authentication failed:', authError)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    console.log('✅ User authenticated:', user.id)
+
     // Create or update player profile first
+    console.log('Creating/updating player profile...')
     const { error: profileError } = await supabase
       .from('players')
       .upsert({
@@ -27,11 +33,13 @@ export async function POST(request: Request) {
       })
 
     if (profileError) {
-      console.error('Error creating player profile:', profileError)
+      console.error('Profile creation error:', profileError)
       return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
     }
+    console.log('✅ Player profile ensured')
 
     // Create wallet if it doesn't exist
+    console.log('Creating/updating wallet...')
     const { error: walletError } = await supabase
       .from('wallets')
       .upsert({
@@ -43,13 +51,15 @@ export async function POST(request: Request) {
       })
 
     if (walletError) {
-      console.error('Error creating wallet:', walletError)
+      console.error('Wallet creation error:', walletError)
       return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 })
     }
+    console.log('✅ Wallet ensured')
 
+    console.log('=== WALLET ENSURE API COMPLETED ===')
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Ensure wallet error:', error)
+    console.error('Wallet ensure exception:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

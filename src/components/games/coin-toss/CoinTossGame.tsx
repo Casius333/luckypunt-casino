@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
+import { useUser } from '@/hooks/useUser';
 import { CoinSide, CoinTossRound } from '@/types/coin-toss';
 import CoinAnimation from './CoinAnimation';
 import CoinTossControls from './CoinTossControls';
@@ -14,10 +15,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export default function CoinTossGame() {
     const router = useRouter();
-    const { wallet, loading, refetch: refetchWallet } = useWallet();
+    const { user, loading: userLoading } = useUser();
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<CoinSide | undefined>();
     const [currentRound, setCurrentRound] = useState<CoinTossRound | null>(null);
+    
+    // Show loading state while user is loading
+    if (userLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    // Show unauthenticated state if no user
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div>Please sign in to play Coin Toss</div>
+            </div>
+        );
+    }
+
+    // Only invoke useWallet if user is authenticated
+    const { wallet, loading, refetch: refetchWallet } = useWallet();
     const balance = wallet?.balance ?? 0;
 
     const handleExit = () => {

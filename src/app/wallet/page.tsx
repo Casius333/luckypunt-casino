@@ -8,15 +8,63 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Wallet as WalletIcon, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useEffect } from 'react'
 
 export default function WalletPage() {
+    if (process.env.NODE_ENV === 'development') {
+        console.log('=== WALLET PAGE COMPONENT RENDERED ===')
+    }
+    
     const { user, loading: userLoading } = useUser()
+
+    // Show loading state while user is loading
+    if (userLoading) {
+        return <div className="container mx-auto px-4 py-8">Loading...</div>
+    }
+
+    // Show unauthenticated state if no user
+    if (!user) {
+        return <div className="container mx-auto px-4 py-8">Please sign in to view your wallet.</div>
+    }
+
+    // Only invoke useWallet and useTransactions if user is authenticated
     const { wallet, loading: walletLoading, refetch: refetchWallet } = useWallet()
     const { transactions, loading: transactionsLoading, refetch: refetchTransactions } = useTransactions()
 
-    const isLoading = userLoading || walletLoading || transactionsLoading
+    const isLoading = walletLoading || transactionsLoading
+
+    // Debug logging - only when values change
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('=== WALLET PAGE DEBUG ===')
+            console.log('User:', user ? { id: user.id, email: user.email } : null)
+            console.log('Wallet:', wallet ? { id: wallet.id, balance: wallet.balance, bonus_balance: wallet.bonus_balance } : null)
+            console.log('Transactions count:', transactions?.length || 0)
+            console.log('Loading states:', { userLoading, walletLoading, transactionsLoading })
+            console.log('=== END WALLET PAGE DEBUG ===')
+        }
+    }, [user?.id, wallet?.id, wallet?.balance, wallet?.bonus_balance, transactions?.length, userLoading, walletLoading, transactionsLoading])
+
+    // Test Supabase client only once when user is available
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development' && user) {
+            console.log('🧪 Testing Supabase client...')
+            import('@/lib/supabase/client').then(({ createClient }) => {
+                const testClient = createClient()
+                console.log('🧪 Test client created:', !!testClient)
+                
+                // Test a simple query
+                testClient.from('wallets').select('count').then(({ count, error }) => {
+                    console.log('🧪 Test query result:', { count, error })
+                })
+            })
+        }
+    }, [user?.id])
 
     const handleRefresh = () => {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('=== REFRESHING WALLET ===')
+        }
         refetchWallet()
         refetchTransactions()
     }
@@ -59,11 +107,33 @@ export default function WalletPage() {
                                 <>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Main Balance</p>
-                                        <p className="text-3xl font-bold">${wallet.balance.toFixed(2)}</p>
+                                        <p className="text-3xl font-bold">
+                                            {(() => {
+                                                try {
+                                                    return `$${wallet.balance.toFixed(2)}`
+                                                } catch (error) {
+                                                    if (process.env.NODE_ENV === 'development') {
+                                                        console.error('Error formatting main balance:', error)
+                                                    }
+                                                    return '$0.00'
+                                                }
+                                            })()}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Bonus Balance</p>
-                                        <p className="text-3xl font-bold">${wallet.bonus_balance.toFixed(2)}</p>
+                                        <p className="text-3xl font-bold">
+                                            {(() => {
+                                                try {
+                                                    return `$${wallet.bonus_balance.toFixed(2)}`
+                                                } catch (error) {
+                                                    if (process.env.NODE_ENV === 'development') {
+                                                        console.error('Error formatting bonus balance:', error)
+                                                    }
+                                                    return '$0.00'
+                                                }
+                                            })()}
+                                        </p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button className="flex-1">Deposit</Button>

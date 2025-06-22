@@ -1,7 +1,7 @@
 'use client'
 
+import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useState, useRef } from 'react'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
@@ -16,7 +16,10 @@ interface DatabaseWallet {
 export default function BalanceDisplay() {
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createPagesBrowserClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
 
@@ -105,6 +108,13 @@ export default function BalanceDisplay() {
   }, [supabase, router]) // Only re-run if supabase client changes
 
   if (loading) return null
+
+  // Log balance before rendering
+  console.log('=== BALANCE DISPLAY RENDERING DEBUG ===')
+  console.log('Balance state value:', balance)
+  console.log('Balance type:', typeof balance)
+  console.log('Formatted balance:', balance?.toFixed(2) || '0.00')
+  console.log('=== END BALANCE DISPLAY RENDERING DEBUG ===')
 
   return (
     <div className="flex items-center gap-2">

@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { X } from 'lucide-react'
-import { toast } from 'react-hot-toast'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
-import { RealtimeChannel } from '@supabase/supabase-js'
+import { useState, useEffect } from 'react'
+import { X, DollarSign, CreditCard, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
+import { toast } from 'sonner'
 
 interface CashierModalProps {
   isOpen: boolean
@@ -26,9 +24,10 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
   const [isDeposit, setIsDeposit] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
-  const supabase = createPagesBrowserClient()
-  const router = useRouter()
-  const channelRef = useRef<RealtimeChannel | null>(null)
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     if (!isOpen) return
@@ -57,57 +56,13 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
           console.log('Setting initial balance:', wallet.balance)
           setBalance(wallet.balance)
         }
-
-        // Clean up any existing subscription
-        if (channelRef.current) {
-          console.log('Cleaning up existing subscription')
-          channelRef.current.unsubscribe()
-          channelRef.current = null
-        }
-
-        // Set up real-time subscription
-        console.log('Setting up new subscription for user:', user.id)
-        const channel = supabase
-          .channel(`wallet_changes_${user.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'wallets',
-              filter: `user_id=eq.${user.id}`
-            },
-            (payload) => {
-              console.log('Received wallet update:', payload)
-              const newWallet = payload.new as DatabaseWallet
-              if (newWallet && typeof newWallet.balance === 'number') {
-                console.log('Setting new balance:', newWallet.balance)
-                setBalance(newWallet.balance)
-                // Force a UI refresh
-                router.refresh()
-              }
-            }
-          )
-          .subscribe((status) => {
-            console.log('Subscription status:', status)
-          })
-
-        channelRef.current = channel
       } catch (error) {
         console.error('Error in fetchBalance:', error)
       }
     }
 
     fetchBalance()
-
-    return () => {
-      if (channelRef.current) {
-        console.log('Cleaning up subscription on unmount')
-        channelRef.current.unsubscribe()
-        channelRef.current = null
-      }
-    }
-  }, [isOpen, supabase, router])
+  }, [isOpen, supabase])
 
   if (!isOpen) return null
 

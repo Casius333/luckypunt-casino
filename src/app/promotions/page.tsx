@@ -118,7 +118,7 @@ export default function PromotionsPage() {
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     Bonus: ${userPromotion.bonus_amount.toFixed(2)} | 
-                    Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_requirement.toFixed(2)}
+                    Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_required.toFixed(2)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -143,7 +143,7 @@ export default function PromotionsPage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                         Bonus: ${userPromotion.bonus_amount.toFixed(2)} | 
-                        Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_requirement.toFixed(2)}
+                        Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_required.toFixed(2)}
                     </p>
                     </div>
                     <div className="text-right">
