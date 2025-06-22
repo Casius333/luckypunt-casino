@@ -4,9 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import useUser from '@/hooks/useUser'
 
 interface CashierModalProps {
   isOpen: boolean
@@ -27,10 +26,9 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
   const [isDeposit, setIsDeposit] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createPagesBrowserClient()
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const { forceLogout } = useUser()
 
   useEffect(() => {
     if (!isOpen) return
@@ -139,7 +137,6 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
         
         if (response.status === 401) {
           toast.error('Session expired. Please sign in again.')
-          if (forceLogout) forceLogout()
           return
         }
 
@@ -162,7 +159,6 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
         
         if (response.status === 401) {
           toast.error('Session expired. Please sign in again.')
-          if (forceLogout) forceLogout()
           return
         }
 

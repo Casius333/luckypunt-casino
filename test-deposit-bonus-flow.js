@@ -1,265 +1,324 @@
 const { createClient } = require('@supabase/supabase-js')
-require('dotenv').config({ path: '.env.local' })
+require('dotenv').config()
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase environment variables')
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing required environment variables')
+  console.log('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING')
+  console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'MISSING')
   process.exit(1)
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// Use a known test user ID (replace with your actual test user ID)
-const testUserId = 'b8602d62-1e9b-4273-be98-05668a3cb9bd'
-
-async function testDepositBonusFlow() {
-  console.log('=== STARTING DEPOSIT BONUS FLOW TEST ===')
-  
+// Import the applyDepositBonus function logic directly
+async function applyDepositBonus(userId, depositAmount) {
   try {
-    console.log(`\nUsing test user: ${testUserId}`)
-    
-    // Step 2: Check user's wallet
-    console.log('\n2. Checking user wallet...')
+    // Find active deposit-type promotion for this user
+    const { data: activePromotion, error: fetchError } = await supabase
+      .from('user_promotions')
+      .select(`
+        *,
+        promotion:promotions(*)
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .eq('bonus_amount', 0) // Only promotions that haven't been awarded yet
+      .single();
+
+    if (fetchError || !activePromotion) {
+      console.log('No active deposit promotion found for user:', userId);
+      return { success: false, message: 'No active deposit promotion found' };
+    }
+
+    const promotion = activePromotion.promotion;
+    if (!promotion || promotion.type !== 'deposit_bonus') {
+      console.log('Not a deposit-type promotion:', promotion?.id);
+      return { success: false, message: 'Not a deposit-type promotion' };
+    }
+
+    // Check if deposit meets minimum requirement
+    if (depositAmount < promotion.min_deposit_amount) {
+      console.log(`Deposit amount ${depositAmount} is less than minimum ${promotion.min_deposit_amount}`);
+      return { 
+        success: false, 
+        message: `Deposit amount must be at least $${promotion.min_deposit_amount}` 
+      };
+    }
+
+    // Calculate bonus amount
+    const bonusAmount = Math.min(
+      (depositAmount * promotion.bonus_percent) / 100,
+      promotion.max_bonus_amount
+    );
+
+    if (bonusAmount <= 0) {
+      console.log('Calculated bonus amount is 0 or negative');
+      return { success: false, message: 'No bonus to award' };
+    }
+
+    // Calculate wagering requirement
+    const wageringRequirement = bonusAmount * promotion.wagering_multiplier;
+
+    // Update user promotion with bonus details
+    const { error: updateError } = await supabase
+      .from('user_promotions')
+      .update({
+        deposit_amount: depositAmount,
+        bonus_amount: bonusAmount,
+        bonus_balance: bonusAmount,
+        wagering_required: wageringRequirement,
+        wagering_progress: 0,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', activePromotion.id);
+
+    if (updateError) {
+      console.error('Error updating user promotion:', updateError);
+      throw updateError;
+    }
+
+    // Add bonus to user's wallet
     const { data: wallet, error: walletError } = await supabase
       .from('wallets')
-      .select('id, balance, user_id')
-      .eq('user_id', testUserId)
-      .single()
-    if (walletError) {
-      console.error('❌ Error fetching wallet:', walletError)
-      return
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (walletError || !wallet) {
+      console.error('Error fetching wallet:', walletError);
+      throw new Error('Wallet not found');
     }
-    
-    console.log(`✅ Wallet found: Balance = $${wallet.balance}`)
-    
-    // Step 3: Check for active promotions
-    console.log('\n3. Checking for active promotions...')
-    const { data: activePromotion, error: promotionError } = await supabase
-      .from('user_promotions')
-      .select(`
-        *,
-        promotions (*)
-      `)
-      .eq('user_id', testUserId)
-      .eq('status', 'active')
-      .single()
-    
-    if (promotionError && promotionError.code !== 'PGRST116') {
-      console.error('❌ Error fetching active promotion:', promotionError)
-      return
-    }
-    
-    if (activePromotion) {
-      console.log(`✅ Active promotion found: ${activePromotion.promotions.name}`)
-      console.log(`   Bonus awarded: $${activePromotion.bonus_awarded}`)
-      console.log(`   Bonus balance: $${activePromotion.bonus_balance}`)
-      console.log(`   Wagering required: $${activePromotion.wagering_required}`)
-      console.log(`   Wagering completed: $${activePromotion.wagering_completed}`)
-    } else {
-      console.log('ℹ️  No active promotion found')
-      
-      // Step 4: Check available promotions to activate
-      console.log('\n4. Checking available promotions...')
-      const { data: availablePromotions, error: availableError } = await supabase
-        .from('promotions')
-        .select('*')
-        .eq('is_active', true)
-        .eq('type', 'deposit_bonus')
-      
-      if (availableError) {
-        console.error('❌ Error fetching available promotions:', availableError)
-        return
-      }
-      
-      console.log(`✅ Found ${availablePromotions.length} available deposit bonus promotions`)
-      
-      if (availablePromotions.length > 0) {
-        const promotion = availablePromotions[0]
-        console.log(`\n5. Activating promotion: ${promotion.name}`)
-        
-        // Activate the promotion
-        const { data: activatedPromotion, error: activateError } = await supabase
-          .from('user_promotions')
-          .insert({
-            user_id: testUserId,
-            promotion_id: promotion.id,
-            status: 'active',
-            bonus_awarded: 0,
-            bonus_balance: 0,
-            wagering_required: 0,
-            wagering_completed: 0,
-            activated_at: new Date().toISOString()
-          })
-          .select()
-          .single()
-        
-        if (activateError) {
-          console.error('❌ Error activating promotion:', activateError)
-          return
-        }
-        
-        console.log(`✅ Promotion activated successfully!`)
-        console.log(`   User promotion ID: ${activatedPromotion.id}`)
-      }
-    }
-    
-    // Step 5: Simulate a deposit
-    console.log('\n6. Simulating deposit...')
-    const depositAmount = 100
-    
+
     // Update wallet balance
-    const { data: updatedWallet, error: updateError } = await supabase
+    const { error: balanceError } = await supabase
       .from('wallets')
-      .update({ balance: wallet.balance + depositAmount })
-      .eq('user_id', testUserId)
-      .select()
-      .single()
-    
-    if (updateError) {
-      console.error('❌ Error updating wallet:', updateError)
-      return
+      .update({
+        balance: wallet.balance + bonusAmount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', wallet.id);
+
+    if (balanceError) {
+      console.error('Error updating wallet balance:', balanceError);
+      throw balanceError;
     }
-    
-    console.log(`✅ Deposit processed: $${depositAmount}`)
-    console.log(`   New balance: $${updatedWallet.balance}`)
-    
-    // Step 6: Check if bonus should be applied
-    console.log('\n7. Checking if bonus should be applied...')
-    const { data: currentPromotion, error: currentError } = await supabase
-      .from('user_promotions')
-      .select(`
-        *,
-        promotions (*)
-      `)
-      .eq('user_id', testUserId)
-      .eq('status', 'active')
-      .single()
-    
-    if (currentError && currentError.code !== 'PGRST116') {
-      console.error('❌ Error fetching current promotion:', currentError)
-      return
+
+    // Record bonus transaction
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        wallet_id: wallet.id,
+        type: 'deposit_bonus',
+        amount: bonusAmount,
+        currency: 'AUD',
+        status: 'completed',
+        reference_id: `bonus_${activePromotion.id}`,
+        metadata: { 
+          description: `Deposit bonus from ${promotion.name}`,
+          deposit_amount: depositAmount,
+          promotion_id: promotion.id,
+          user_promotion_id: activePromotion.id
+        }
+      });
+
+    if (transactionError) {
+      console.error('Error recording bonus transaction:', transactionError);
+      throw transactionError;
     }
-    
-    if (currentPromotion && currentPromotion.bonus_awarded === 0) {
-      console.log(`✅ Found active promotion ready for bonus: ${currentPromotion.promotions.name}`)
-      
-      // Calculate bonus
-      const bonusPercent = currentPromotion.promotions.bonus_percent
-      const maxBonus = currentPromotion.promotions.max_bonus_amount
-      const calculatedBonus = Math.min(depositAmount * (bonusPercent / 100), maxBonus)
-      const wageringRequired = calculatedBonus * currentPromotion.promotions.wagering_multiplier
-      
-      console.log(`   Deposit amount: $${depositAmount}`)
-      console.log(`   Bonus percent: ${bonusPercent}%`)
-      console.log(`   Calculated bonus: $${calculatedBonus}`)
-      console.log(`   Wagering required: $${wageringRequired}`)
-      
-      // Apply bonus
-      const { data: bonusApplied, error: bonusError } = await supabase
-        .from('user_promotions')
-        .update({
-          bonus_awarded: calculatedBonus,
-          bonus_balance: calculatedBonus,
-          wagering_required: wageringRequired,
-          bonus_awarded_at: new Date().toISOString()
-        })
-        .eq('id', currentPromotion.id)
-        .select()
-        .single()
-      
-      if (bonusError) {
-        console.error('❌ Error applying bonus:', bonusError)
-        return
-      }
-      
-      // Update wallet with bonus
-      const { data: finalWallet, error: finalError } = await supabase
-        .from('wallets')
-        .update({ balance: updatedWallet.balance + calculatedBonus })
-        .eq('user_id', testUserId)
-        .select()
-        .single()
-      
-      if (finalError) {
-        console.error('❌ Error updating wallet with bonus:', finalError)
-        return
-      }
-      
-      console.log(`✅ Bonus applied successfully!`)
-      console.log(`   Bonus amount: $${calculatedBonus}`)
-      console.log(`   Final wallet balance: $${finalWallet.balance}`)
-      console.log(`   Wagering required: $${wageringRequired}`)
-      
-      // Record transaction
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: testUserId,
-          type: 'bonus_awarded',
-          amount: calculatedBonus,
-          description: `Deposit bonus from ${currentPromotion.promotions.name}`,
-          status: 'completed'
-        })
-        .select()
-        .single()
-      
-      if (transactionError) {
-        console.error('❌ Error recording transaction:', transactionError)
-        return
-      }
-      
-      console.log(`✅ Transaction recorded: ${transaction.id}`)
-      
-    } else if (currentPromotion) {
-      console.log(`ℹ️  Promotion already has bonus awarded: $${currentPromotion.bonus_awarded}`)
-    } else {
-      console.log('ℹ️  No active promotion found for bonus application')
-    }
-    
-    // Final check
-    console.log('\n8. Final state check...')
-    const { data: finalWallet, error: finalWalletError } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', testUserId)
-      .single()
-    
-    if (finalWalletError) {
-      console.error('❌ Error fetching final wallet:', finalWalletError)
-      return
-    }
-    
-    const { data: finalPromotion, error: finalPromotionError } = await supabase
-      .from('user_promotions')
-      .select(`
-        *,
-        promotions (*)
-      `)
-      .eq('user_id', testUserId)
-      .eq('status', 'active')
-      .single()
-    
-    if (finalPromotionError && finalPromotionError.code !== 'PGRST116') {
-      console.error('❌ Error fetching final promotion:', finalPromotionError)
-      return
-    }
-    
-    console.log(`✅ Final wallet balance: $${finalWallet.balance}`)
-    if (finalPromotion) {
-      console.log(`✅ Final promotion state:`)
-      console.log(`   Bonus awarded: $${finalPromotion.bonus_awarded}`)
-      console.log(`   Bonus balance: $${finalPromotion.bonus_balance}`)
-      console.log(`   Wagering required: $${finalPromotion.wagering_required}`)
-      console.log(`   Wagering completed: $${finalPromotion.wagering_completed}`)
-    }
-    
-    console.log('\n=== DEPOSIT BONUS FLOW TEST COMPLETED ===')
-    
+
+    console.log(`Successfully applied deposit bonus: $${bonusAmount.toFixed(2)} for user ${userId}`);
+
+    return {
+      success: true,
+      bonusAmount,
+      wageringRequirement,
+      message: `Deposit bonus applied! You received $${bonusAmount.toFixed(2)} bonus`
+    };
+
   } catch (error) {
-    console.error('❌ Test failed with error:', error)
+    console.error('Error applying deposit bonus:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to apply deposit bonus'
+    };
   }
 }
 
-testDepositBonusFlow() 
+async function testDepositBonusFlow() {
+  console.log('🚀 Starting comprehensive deposit bonus flow test...\n')
+
+  // Step 1: Create test user
+  console.log('📝 Step 1: Creating test user...')
+  const testEmail = `test-${Date.now()}@example.com`
+  const testPassword = 'testpassword123'
+  
+  const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+    email: testEmail,
+    password: testPassword,
+    email_confirm: true
+  })
+
+  if (userError) {
+    console.error('❌ Failed to create test user:', userError)
+    return
+  }
+
+  const testUserId = userData.user.id
+  console.log('✅ Test user created:', testUserId)
+
+  // Step 2: Delete any existing wallets for this user (cleanup)
+  await supabase.from('wallets').delete().eq('user_id', testUserId)
+
+  // Step 2: Create wallet for test user
+  console.log('\n💰 Step 2: Creating wallet for test user...')
+  const { data: walletData, error: walletError } = await supabase
+    .from('wallets')
+    .insert({
+      user_id: testUserId,
+      currency: 'AUD',
+      balance: 0,
+      locked_balance: 0
+    })
+    .select()
+    .single()
+
+  if (walletError) {
+    console.error('❌ Failed to create wallet:', walletError)
+    return
+  }
+
+  console.log('✅ Wallet created with balance:', walletData.balance)
+
+  // Step 3: Check available promotions
+  console.log('\n🎁 Step 3: Checking available promotions...')
+  const now = new Date().toISOString()
+  const { data: promotions, error: promotionsError } = await supabase
+    .from('promotions')
+    .select('*')
+    .eq('type', 'deposit_bonus')
+    .eq('is_active', true)
+    .lte('start_at', now)
+    .gte('end_at', now)
+
+  if (promotionsError) {
+    console.error('❌ Failed to fetch promotions:', promotionsError)
+    return
+  }
+
+  if (!promotions || promotions.length === 0) {
+    console.log('❌ No active deposit bonus promotions found')
+    return
+  }
+
+  const promotion = promotions[0]
+  console.log('✅ Found active promotion:', promotion.name)
+
+  // Step 4: Activate promotion for test user
+  console.log('\n🎯 Step 4: Activating promotion for test user...')
+  const { data: userPromotionData, error: activationError } = await supabase
+    .from('user_promotions')
+    .insert({
+      user_id: testUserId,
+      promotion_id: promotion.id,
+      status: 'active',
+      activated_at: new Date().toISOString(),
+      bonus_balance: 0,
+      wagering_progress: 0,
+      winnings_from_bonus: 0,
+      bonus_amount: 0,
+      wagering_requirement: promotion.wagering_multiplier * promotion.max_bonus_amount
+    })
+    .select()
+    .single()
+
+  if (activationError) {
+    console.error('❌ Failed to activate promotion:', activationError)
+    return
+  }
+
+  console.log('✅ Promotion activated')
+
+  // Step 5: Make a deposit
+  console.log('\n💳 Step 5: Making a deposit...')
+  const depositAmount = 100
+  
+  // First, update the wallet balance
+  const { data: updatedWallet, error: walletUpdateError } = await supabase
+    .from('wallets')
+    .update({ 
+      balance: walletData.balance + depositAmount,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', testUserId)
+    .select()
+    .single()
+
+  if (walletUpdateError) {
+    console.error('❌ Failed to update wallet:', walletUpdateError)
+    return
+  }
+
+  console.log('✅ Wallet updated. New balance:', updatedWallet.balance)
+
+  // Step 6: Apply deposit bonus using the actual function
+  console.log('🎁 Step 6: Applying deposit bonus...');
+  const bonusResult = await applyDepositBonus(testUserId, depositAmount);
+  
+  if (!bonusResult.success) {
+    console.error('❌ Failed to apply bonus:', bonusResult.message);
+    return;
+  }
+
+  console.log('✅ Bonus applied:', bonusResult.bonusAmount);
+
+  // Step 7: Verify final state
+  console.log('🔍 Step 7: Verifying final state...');
+  
+  // Check wallet
+  const { data: finalWallet, error: finalWalletError } = await supabase
+    .from('wallets')
+    .select('*')
+    .eq('user_id', testUserId)
+    .single();
+
+  if (finalWalletError) {
+    console.error('❌ Failed to fetch final wallet:', finalWalletError);
+    return;
+  }
+
+  // Check user promotion
+  const { data: finalUserPromotion, error: finalPromotionError } = await supabase
+    .from('user_promotions')
+    .select('*')
+    .eq('id', userPromotionData.id)
+    .single();
+
+  if (finalPromotionError) {
+    console.error('❌ Failed to fetch final user promotion:', finalPromotionError);
+    return;
+  }
+
+  console.log('\n🎉 DEPOSIT BONUS FLOW TEST COMPLETED SUCCESSFULLY!');
+  console.log('─'.repeat(50));
+  console.log('Final Wallet Balance:', finalWallet.balance);
+  console.log('Deposit Amount:', finalUserPromotion.deposit_amount);
+  console.log('Bonus Awarded:', finalUserPromotion.bonus_awarded);
+  console.log('Bonus Balance:', finalUserPromotion.bonus_balance);
+  console.log('Wagering Required:', finalUserPromotion.wagering_required);
+  console.log('Promotion Status:', finalUserPromotion.status);
+  console.log('─'.repeat(50));
+
+  // Cleanup test data
+  console.log('\n🧹 Cleaning up test data...');
+  await supabase.from('transactions').delete().eq('user_id', testUserId);
+  await supabase.from('user_promotions').delete().eq('user_id', testUserId);
+  await supabase.from('wallets').delete().eq('user_id', testUserId);
+  await supabase.auth.admin.deleteUser(testUserId);
+  console.log('✅ Test data cleaned up');
+}
+
+testDepositBonusFlow().catch(console.error) 

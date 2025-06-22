@@ -27,7 +27,7 @@ export async function applyDepositBonus(userId: string, depositAmount: number) {
     }
 
     const promotion = activePromotion.promotion
-    if (!promotion || promotion.min_deposit_amount === 0) {
+    if (!promotion || promotion.type !== 'deposit') {
       // Not a deposit-type promotion
       console.log('Not a deposit-type promotion:', promotion?.id)
       return { success: false, message: 'Not a deposit-type promotion' }
@@ -60,7 +60,8 @@ export async function applyDepositBonus(userId: string, depositAmount: number) {
     const { error: updateError } = await supabase
       .from('user_promotions')
       .update({
-        bonus_awarded: bonusAmount,
+        deposit_amount: depositAmount,
+        bonus_amount: bonusAmount,
         bonus_balance: bonusAmount,
         wagering_required: wageringRequirement,
         wagering_progress: 0,
@@ -105,13 +106,13 @@ export async function applyDepositBonus(userId: string, depositAmount: number) {
       .insert({
         user_id: userId,
         wallet_id: wallet.id,
-        type: 'bonus',
+        type: 'deposit_bonus',
         amount: bonusAmount,
         currency: 'AUD',
         status: 'completed',
-        reference_id: `bonus-${Date.now()}`,
+        reference_id: `bonus_${activePromotion.id}`,
         metadata: { 
-          source: 'promotion',
+          description: `Deposit bonus from ${promotion.name}`,
           deposit_amount: depositAmount,
           promotion_id: promotion.id,
           user_promotion_id: activePromotion.id
@@ -164,7 +165,7 @@ export async function hasActiveDepositPromotion(userId: string) {
     }
 
     const promotion = activePromotion.promotion
-    return promotion && promotion.min_deposit_amount > 0
+    return promotion && promotion.type === 'deposit'
 
   } catch (error) {
     console.error('Error checking active deposit promotion:', error)
@@ -195,7 +196,7 @@ export async function getActiveDepositPromotion(userId: string) {
     }
 
     const promotion = activePromotion.promotion
-    if (!promotion || promotion.min_deposit_amount === 0) {
+    if (!promotion || promotion.type !== 'deposit') {
       return null
     }
 
@@ -207,8 +208,70 @@ export async function getActiveDepositPromotion(userId: string) {
   }
 }
 
+/**
+ * Activate a promotion for a user
+ */
 export async function activatePromotion(userId: string, promotionId: string) {
   const supabase = createClient()
 
-  // ... existing code ...
+  try {
+    // Get promotion details
+    const { data: promotion, error: promoError } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('id', promotionId)
+      .eq('is_active', true)
+      .single()
+
+    if (promoError || !promotion) {
+      throw new Error('Promotion not found or inactive')
+    }
+
+    // Check if user already has an active promotion of this type
+    const { data: existingPromotion, error: existingError } = await supabase
+      .from('user_promotions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('promotion_id', promotionId)
+      .eq('status', 'active')
+      .single()
+
+    if (existingPromotion) {
+      throw new Error('Promotion already activated')
+    }
+
+    // Create user promotion record with correct schema
+    const { data: userPromotion, error: createError } = await supabase
+      .from('user_promotions')
+      .insert({
+        user_id: userId,
+        promotion_id: promotionId,
+        status: 'active',
+        activated_at: new Date().toISOString(),
+        bonus_balance: 0,
+        wagering_progress: 0,
+        winnings_from_bonus: 0,
+        bonus_amount: 0,
+        wagering_requirement: 0 // Will be set when bonus is awarded
+      })
+      .select()
+      .single()
+
+    if (createError) {
+      throw createError
+    }
+
+    return {
+      success: true,
+      userPromotion,
+      message: 'Promotion activated successfully'
+    }
+
+  } catch (error) {
+    console.error('Error activating promotion:', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to activate promotion'
+    }
+  }
 } 

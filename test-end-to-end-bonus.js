@@ -13,19 +13,19 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-async function testFullDepositBonusFlow() {
-  console.log('🧪 Testing Full Deposit Bonus Flow...\n')
+async function testEndToEndBonusFlow() {
+  console.log('🧪 Testing End-to-End Deposit Bonus Flow...\n')
 
   try {
     // 0. Clean up any existing test data
     console.log('0. Cleaning up existing test data...')
-    const testEmail = `test-deposit-bonus-${Date.now()}@example.com`
+    const testEmail = `test-e2e-bonus-${Date.now()}@example.com`
     
     // Delete any existing test users with similar emails
     const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers()
     if (!listError) {
       const testUsers = existingUsers.users.filter(user => 
-        user.email && user.email.includes('test-deposit-bonus-')
+        user.email && user.email.includes('test-e2e-bonus-')
       )
       for (const user of testUsers) {
         console.log('   Cleaning up test user:', user.email)
@@ -74,16 +74,16 @@ async function testFullDepositBonusFlow() {
     const { data: promotion, error: promoError } = await supabase
       .from('promotions')
       .insert({
-        name: 'Test Deposit Bonus',
+        name: 'E2E Test Deposit Bonus',
         description: '100% deposit bonus up to $100',
-        type: 'deposit',
         bonus_percent: 100,
         max_bonus_amount: 100,
         min_deposit_amount: 50,
         wagering_multiplier: 25,
         max_withdrawal_amount: 200,
         is_active: true,
-        start_at: new Date().toISOString()
+        start_at: new Date().toISOString(),
+        end_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
       })
       .select()
       .single()
@@ -95,8 +95,8 @@ async function testFullDepositBonusFlow() {
 
     console.log('✅ Promotion created:', promotion.id)
 
-    // 4. Activate the promotion for the user (simulate the new flow)
-    console.log('\n4. Activating promotion for user...')
+    // 4. Simulate user activating the promotion (through the UI)
+    console.log('\n4. Simulating user activating promotion...')
     const { data: userPromotion, error: userPromoError } = await supabase
       .from('user_promotions')
       .insert({
@@ -104,11 +104,11 @@ async function testFullDepositBonusFlow() {
         promotion_id: promotion.id,
         status: 'active',
         activated_at: new Date().toISOString(),
-        bonus_amount: 0, // No bonus awarded yet
-        bonus_balance: 0, // Required field
-        wagering_requirement: 0, // No wagering required yet
-        wagering_progress: 0, // Start with 0 progress
-        winnings_from_bonus: 0
+        bonus_amount: 0,
+        bonus_balance: 0,
+        wagering_requirement: 0,
+        wagering_progress: 0,
+        max_withdrawal_amount: promotion.max_withdrawal_amount
       })
       .select(`
         *,
@@ -122,28 +122,27 @@ async function testFullDepositBonusFlow() {
     }
 
     console.log('✅ Promotion activated (waiting for deposit)')
+    console.log('   - Status:', userPromotion.status)
     console.log('   - Bonus amount:', userPromotion.bonus_amount)
-    console.log('   - Bonus balance:', userPromotion.bonus_balance)
-    console.log('   - Wagering requirement:', userPromotion.wagering_requirement)
 
-    // 5. Simulate a deposit that should trigger the bonus
-    console.log('\n5. Making a deposit that should trigger bonus...')
+    // 5. Simulate user making a deposit (through the API)
+    console.log('\n5. Simulating user making a deposit...')
     const depositAmount = 75 // Above minimum requirement
 
-    // First, make the deposit transaction
+    // Create deposit transaction
     const { error: depositError } = await supabase
       .from('transactions')
       .insert({
         user_id: userId,
         wallet_id: wallet.id,
-        type: 'test_deposit',
+        type: 'deposit',
         amount: depositAmount,
         currency: 'AUD',
         status: 'completed',
-        reference_id: `test_${Date.now()}`,
+        reference_id: `e2e_test_${Date.now()}`,
         metadata: {
           deposit_type: 'test',
-          description: 'Test deposit for bonus testing'
+          description: 'E2E test deposit'
         }
       })
 
@@ -170,13 +169,13 @@ async function testFullDepositBonusFlow() {
 
     console.log('✅ Deposit completed, wallet balance:', updatedWallet.balance)
 
-    // 6. Now apply the deposit bonus (simulate the API call)
+    // 6. Apply deposit bonus (simulate the API logic)
     console.log('\n6. Applying deposit bonus...')
     
+    // Apply deposit bonus logic directly
     let bonusApplied = false
     let appliedBonusAmount = 0
     
-    // Test the bonus application logic directly
     try {
       // Find active deposit-type promotion for this user
       const { data: activePromotion, error: fetchError } = await supabase
@@ -194,7 +193,7 @@ async function testFullDepositBonusFlow() {
         console.log('❌ No active deposit promotion found:', fetchError?.message || 'No promotion found')
       } else {
         const promotion = activePromotion.promotion
-        if (!promotion || promotion.type !== 'deposit') {
+        if (!promotion || promotion.min_deposit_amount === 0) {
           console.log('❌ Not a deposit-type promotion')
         } else if (depositAmount < promotion.min_deposit_amount) {
           console.log(`❌ Deposit amount ${depositAmount} is less than minimum ${promotion.min_deposit_amount}`)
@@ -215,10 +214,9 @@ async function testFullDepositBonusFlow() {
             const { error: updateError } = await supabase
               .from('user_promotions')
               .update({
-                deposit_amount: depositAmount,
                 bonus_amount: bonusAmount,
                 bonus_balance: bonusAmount,
-                wagering_required: wageringRequirement,
+                wagering_requirement: wageringRequirement,
                 wagering_progress: 0,
                 updated_at: new Date().toISOString()
               })
@@ -227,10 +225,7 @@ async function testFullDepositBonusFlow() {
             if (updateError) {
               console.log('❌ Error updating user promotion:', updateError.message)
             } else {
-              // Add bonus to user's wallet - use the wallet we created for this test
-              console.log('✅ Using test wallet for bonus application:', wallet.id)
-              
-              // Update wallet balance
+              // Add bonus to user's wallet
               const { data: finalWallet, error: balanceError } = await supabase
                 .from('wallets')
                 .update({
@@ -250,7 +245,7 @@ async function testFullDepositBonusFlow() {
                   .insert({
                     user_id: userId,
                     wallet_id: wallet.id,
-                    type: 'deposit_bonus',
+                    type: 'bonus',
                     amount: bonusAmount,
                     currency: 'AUD',
                     status: 'completed',
@@ -283,8 +278,8 @@ async function testFullDepositBonusFlow() {
       console.log('❌ Error applying deposit bonus:', error.message)
     }
 
-    // 7. Check the final state
-    console.log('\n7. Checking final state...')
+    // 7. Verify final state
+    console.log('\n7. Verifying final state...')
     
     // Get updated user promotion
     const { data: finalUserPromotion, error: finalPromoError } = await supabase
@@ -300,11 +295,11 @@ async function testFullDepositBonusFlow() {
       console.error('Error fetching final user promotion:', finalPromoError)
     } else {
       console.log('✅ Final user promotion state:')
+      console.log('   - Status:', finalUserPromotion.status)
       console.log('   - Bonus amount:', finalUserPromotion.bonus_amount)
       console.log('   - Bonus balance:', finalUserPromotion.bonus_balance)
-      console.log('   - Wagering requirement:', finalUserPromotion.wagering_required)
+      console.log('   - Wagering requirement:', finalUserPromotion.wagering_requirement)
       console.log('   - Wagering progress:', finalUserPromotion.wagering_progress)
-      console.log('   - Status:', finalUserPromotion.status)
     }
 
     // Get updated wallet
@@ -329,7 +324,7 @@ async function testFullDepositBonusFlow() {
       .from('transactions')
       .select('*')
       .eq('user_id', userId)
-      .eq('type', 'deposit_bonus')
+      .eq('type', 'bonus')
       .eq('wallet_id', wallet.id)
       .single()
 
@@ -343,16 +338,17 @@ async function testFullDepositBonusFlow() {
     }
 
     // Summary
-    console.log('\n📊 TEST SUMMARY:')
+    console.log('\n📊 E2E TEST SUMMARY:')
     console.log('   - Test user ID:', userId)
     console.log('   - Test wallet ID:', wallet.id)
     console.log('   - Deposit amount:', depositAmount)
     console.log('   - Bonus applied:', bonusApplied ? '✅' : '❌')
-    console.log('   - Bonus amount:', appliedBonusAmount)
+    console.log('   - Bonus amount:', appliedBonusAmount || 0)
     console.log('   - Final wallet balance:', finalWallet?.balance || 'Unknown')
     console.log('   - Bonus transaction created:', bonusTransaction ? '✅' : '❌')
+    console.log('   - User promotion updated:', finalUserPromotion ? '✅' : '❌')
 
-    console.log('\n🎉 Full deposit bonus flow test completed!')
+    console.log('\n🎉 End-to-end deposit bonus flow test completed!')
 
   } catch (error) {
     console.error('❌ Test failed:', error)
@@ -360,4 +356,4 @@ async function testFullDepositBonusFlow() {
 }
 
 // Run the test
-testFullDepositBonusFlow() 
+testEndToEndBonusFlow() 

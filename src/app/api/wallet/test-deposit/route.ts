@@ -1,10 +1,18 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { applyDepositBonus } from '@/lib/promotionUtils'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
+    
+    // Get the deposit amount from the request body
+    const { amount } = await request.json()
+    const depositAmount = Number(amount)
+    if (isNaN(depositAmount) || depositAmount <= 0) {
+      return NextResponse.json({ error: 'Invalid deposit amount' }, { status: 400 })
+    }
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -14,32 +22,34 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('Processing deposit for user:', user.id)
+    console.log('Processing deposit for user:', user.id, 'Amount:', depositAmount)
 
-    // Get current wallet
-    const { data: wallets, error: walletError } = await supabase
+    // Get current wallet - using correct schema
+    const { data: wallet, error: walletError } = await supabase
       .from('wallets')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .single()
 
-    if (walletError) {
+    if (walletError && walletError.code !== 'PGRST116') {
       console.error('Error fetching wallet:', walletError)
       return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 })
     }
 
-    let currentWallet = wallets?.[0]
+    let currentWallet = wallet
     let currentBalance = 0
 
     if (currentWallet) {
       console.log('Updating existing wallet. Current balance:', currentWallet.balance)
       currentBalance = currentWallet.balance || 0
       
-      // Update existing wallet
+      // Update existing wallet with correct schema - use updated_at instead of last_updated
       const { error: updateError } = await supabase
         .from('wallets')
-        .update({ balance: currentBalance + 100 })
+        .update({ 
+          balance: currentBalance + depositAmount,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', currentWallet.id)
 
       if (updateError) {
@@ -47,13 +57,13 @@ export async function POST() {
         return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 })
       }
     } else {
-      // Create new wallet
+      // Create new wallet with correct schema
       const { error: insertError } = await supabase
         .from('wallets')
         .insert({
           user_id: user.id,
-          balance: 100,
-          currency: 'USD'
+          balance: depositAmount,
+          currency: 'AUD'
         })
 
       if (insertError) {
@@ -62,15 +72,21 @@ export async function POST() {
       }
     }
 
-    // Record transaction
+    // Record transaction with correct schema
     const { error: transactionError } = await supabase
       .from('transactions')
       .insert({
         user_id: user.id,
-        type: 'deposit',
-        amount: 100,
-        description: 'Test deposit',
-        status: 'completed'
+        wallet_id: currentWallet?.id,
+        type: 'test_deposit',
+        amount: depositAmount,
+        currency: 'AUD',
+        status: 'completed',
+        reference_id: `test_${Date.now()}`,
+        metadata: {
+          description: 'Test deposit for bonus testing',
+          deposit_type: 'test'
+        }
       })
 
     if (transactionError) {
@@ -78,12 +94,28 @@ export async function POST() {
       // Don't fail the request, just log the error
     }
 
-    console.log('Successfully updated wallet. New balance:', currentBalance + 100)
+    console.log('Successfully updated wallet. New balance:', currentBalance + depositAmount)
+
+    // Apply deposit bonus if user has an active promotion
+    const bonusResult = await applyDepositBonus(user.id, depositAmount)
+    
+    let responseMessage = 'Test deposit processed successfully'
+    let finalBalance = currentBalance + depositAmount
+    
+    if (bonusResult.success) {
+      responseMessage = bonusResult.message
+      finalBalance += bonusResult.bonusAmount || 0
+      console.log('✅ Deposit bonus applied:', bonusResult.bonusAmount || 0)
+    } else {
+      console.log('ℹ️ No deposit bonus applied:', bonusResult.message)
+    }
 
     return NextResponse.json({ 
       success: true, 
-      newBalance: currentBalance + 100,
-      message: 'Test deposit processed successfully'
+      newBalance: finalBalance,
+      message: responseMessage,
+      bonusApplied: bonusResult.success,
+      bonusAmount: bonusResult.bonusAmount || 0
     })
 
   } catch (error) {

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useUser } from './useUser';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 const supabase = createClient();
 
@@ -20,6 +21,7 @@ export function useWallet() {
     const [wallet, setWallet] = useState<Wallet | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const channelRef = useRef<RealtimeChannel | null>(null);
 
     const fetchWallet = useCallback(async () => {
         if (!user) {
@@ -51,6 +53,57 @@ export function useWallet() {
         } finally {
             setLoading(false);
         }
+    }, [user]);
+
+    // Set up real-time subscription for wallet updates
+    useEffect(() => {
+        if (!user) {
+            // Clean up existing subscription if user is null
+            if (channelRef.current) {
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
+            return;
+        }
+
+        // Clean up any existing subscription
+        if (channelRef.current) {
+            channelRef.current.unsubscribe();
+            channelRef.current = null;
+        }
+
+        // Set up new real-time subscription
+        const channel = supabase
+            .channel(`wallet_updates_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'wallets',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('Wallet update received:', payload);
+                    const newWallet = payload.new as Wallet;
+                    if (newWallet) {
+                        setWallet(newWallet);
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log('Wallet subscription status:', status);
+            });
+
+        channelRef.current = channel;
+
+        // Cleanup function
+        return () => {
+            if (channelRef.current) {
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
+        };
     }, [user]);
 
     useEffect(() => {

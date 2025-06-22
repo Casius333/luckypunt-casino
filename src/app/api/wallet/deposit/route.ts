@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     // Get current wallet balance
     console.log('Fetching current wallet balance...')
     const { data: wallet, error: walletError } = await supabase
-      .from('wallet')
-      .select('balance')
+      .from('wallets')
+      .select('id, balance, currency')
       .eq('user_id', user.id)
       .single()
 
@@ -46,10 +46,13 @@ export async function POST(request: Request) {
     console.log('Updating wallet balance...')
     const newBalance = currentBalance + numAmount
     const { error: updateError } = await supabase
-      .from('wallet')
+      .from('wallets')
       .upsert({ 
         user_id: user.id, 
-        balance: newBalance 
+        balance: newBalance,
+        currency: wallet?.currency || 'AUD',
+        updated_at: new Date().toISOString(),
+        last_updated: new Date().toISOString()
       })
 
     if (updateError) {
@@ -65,9 +68,16 @@ export async function POST(request: Request) {
       .from('transactions')
       .insert({
         user_id: user.id,
+        wallet_id: wallet.id,
         type: 'deposit',
         amount: numAmount,
-        status: 'completed'
+        currency: wallet?.currency || 'AUD',
+        status: 'completed',
+        reference_id: `deposit_${Date.now()}`,
+        metadata: {
+          description: 'User deposit',
+          deposit_type: 'user_deposit'
+        }
       })
 
     if (txError) {
@@ -90,7 +100,8 @@ export async function POST(request: Request) {
           type,
           bonus_percent,
           min_deposit_amount,
-          max_bonus_amount
+          max_bonus_amount,
+          wagering_multiplier
         )
       `)
       .eq('user_id', user.id)
@@ -105,7 +116,7 @@ export async function POST(request: Request) {
       
       // Find deposit bonus promotions
       const depositPromotions = activePromotions?.filter(
-        up => up.promotions?.type === 'deposit' && up.bonus_awarded === 0
+        up => up.promotions?.type === 'deposit' && up.bonus_amount === 0
       ) || []
 
       console.log('Deposit promotions found:', depositPromotions.length)
@@ -132,7 +143,7 @@ export async function POST(request: Request) {
             promo.max_bonus_amount
           )
           
-          const wageringRequired = bonusAmount * 75 // 75x wagering requirement
+          const wageringRequired = bonusAmount * promo.wagering_multiplier
 
           console.log('Bonus calculation:', {
             bonusAmount,
@@ -143,9 +154,13 @@ export async function POST(request: Request) {
           const { error: promoUpdateError } = await supabase
             .from('user_promotions')
             .update({
-              bonus_awarded: bonusAmount,
+              deposit_amount: numAmount,
+              bonus_amount: bonusAmount,
               bonus_balance: bonusAmount,
-              wagering_required: wageringRequired
+              wagering_required: wageringRequired,
+              wagering_progress: 0,
+              updated_at: new Date().toISOString(),
+              last_updated: new Date().toISOString()
             })
             .eq('id', depositPromo.id)
 
@@ -158,8 +173,12 @@ export async function POST(request: Request) {
           // Add bonus to wallet
           const finalBalance = newBalance + bonusAmount
           const { error: bonusWalletError } = await supabase
-            .from('wallet')
-            .update({ balance: finalBalance })
+            .from('wallets')
+            .update({ 
+              balance: finalBalance,
+              updated_at: new Date().toISOString(),
+              last_updated: new Date().toISOString()
+            })
             .eq('user_id', user.id)
 
           if (bonusWalletError) {
@@ -173,9 +192,18 @@ export async function POST(request: Request) {
             .from('transactions')
             .insert({
               user_id: user.id,
-              type: 'bonus',
+              wallet_id: wallet.id,
+              type: 'deposit_bonus',
               amount: bonusAmount,
-              status: 'completed'
+              currency: wallet?.currency || 'AUD',
+              status: 'completed',
+              reference_id: `bonus_${depositPromo.id}`,
+              metadata: {
+                description: `Deposit bonus from ${promo.name}`,
+                deposit_amount: numAmount,
+                promotion_id: promo.id,
+                user_promotion_id: depositPromo.id
+              }
             })
 
           if (bonusTxError) {
@@ -187,21 +215,14 @@ export async function POST(request: Request) {
           console.log('❌ Deposit does not meet minimum requirement')
         }
       } else {
-        console.log('No eligible deposit promotions found')
+        console.log('No active deposit bonus promotions found')
       }
     }
 
-    // Get final wallet balance
-    const { data: finalWallet } = await supabase
-      .from('wallet')
-      .select('balance')
-      .eq('user_id', user.id)
-      .single()
-
-    console.log('=== DEPOSIT ROUTE COMPLETED ===')
     return NextResponse.json({ 
       success: true, 
-      balance: finalWallet?.balance || newBalance 
+      newBalance: newBalance,
+      message: 'Deposit processed successfully'
     })
 
   } catch (error) {

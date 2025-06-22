@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X, Home, Gift, Wallet, Crown, Settings, LogOut } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { showModal } from './ModalContainer'
 
@@ -21,7 +21,7 @@ const menuItems = [
 
 export default function UserMenu({ onCashierClick }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const supabase = createClientComponentClient()
+  const supabase = createPagesBrowserClient()
   const router = useRouter()
 
   const handleSignOut = async () => {

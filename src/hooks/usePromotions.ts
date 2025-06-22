@@ -31,7 +31,7 @@ export interface UserPromotion {
   forfeited_at: string | null
   bonus_amount: number
   bonus_balance: number
-  wagering_requirement: number
+  wagering_required: number
   wagering_progress: number
   promotion: Promotion
 }
@@ -113,8 +113,9 @@ export function usePromotions(userId?: string) {
           activated_at: new Date().toISOString(),
           bonus_amount: 0,
           bonus_balance: 0,
-          wagering_requirement: 0,
+          wagering_required: 0,
           wagering_progress: 0,
+          winnings_from_bonus: 0
         })
 
       if (error) {
@@ -136,7 +137,11 @@ export function usePromotions(userId?: string) {
     try {
       const { error } = await supabase
         .from('user_promotions')
-        .update({ status: 'cancelled', forfeited_at: new Date().toISOString() })
+        .update({ 
+          status: 'cancelled', 
+          cancelled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', userPromotionId)
 
       if (error) {

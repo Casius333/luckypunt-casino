@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Lock } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
 
 interface SettingsModalProps {
@@ -16,7 +16,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createPagesBrowserClient()
 
   useEffect(() => {
     const getUser = async () => {

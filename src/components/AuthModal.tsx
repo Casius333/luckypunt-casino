@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Loader2, Phone } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
 
 interface AuthModalProps {
@@ -74,7 +74,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [token, setToken] = useState('')
   const [mobile, setMobile] = useState('')
   const [registrationStep, setRegistrationStep] = useState<RegistrationStep>('email')
-  const supabase = createClientComponentClient()
+  const supabase = createPagesBrowserClient()
   const [loading, setLoading] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 

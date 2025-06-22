@@ -48,13 +48,13 @@ export default function ActivePromotionCard({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   const progress =
-    userPromotion.wagering_requirement > 0
+    userPromotion.wagering_required > 0
       ? (userPromotion.wagering_progress /
-          userPromotion.wagering_requirement) *
+          userPromotion.wagering_required) *
         100
       : 0
 
-  const remainingWagering = userPromotion.wagering_requirement - userPromotion.wagering_progress
+  const remainingWagering = userPromotion.wagering_required - userPromotion.wagering_progress
 
   const handleCancel = async () => {
     await onCancel(userPromotion.id)
@@ -121,7 +121,7 @@ export default function ActivePromotionCard({
               <div className="text-right">
                 <span className="text-muted-foreground">Required:</span>
                 <div className="font-medium">
-                  ${userPromotion.wagering_requirement.toFixed(2)}
+                  ${userPromotion.wagering_required.toFixed(2)}
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
@@ -16,7 +16,7 @@ interface DatabaseWallet {
 export default function BalanceDisplay() {
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const supabase = createPagesBrowserClient()
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
 
