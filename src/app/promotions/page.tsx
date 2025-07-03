@@ -4,17 +4,14 @@ import { useUser } from '@/hooks/useUser'
 import { usePromotions } from '@/hooks/usePromotions'
 import PromotionCard from '@/components/PromotionCard'
 import ActivePromotionCard from '@/components/ActivePromotionCard'
-import { Gift, Trophy, History, Loader2 } from 'lucide-react'
+import { Gift, Trophy, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 
 export default function PromotionsPage() {
   const { user, loading: authLoading } = useUser()
   const {
     availablePromotions,
     activePromotion,
-    completedPromotions,
-    cancelledPromotions,
     loading,
     activating,
     cancelling,
@@ -99,66 +96,7 @@ export default function PromotionsPage() {
       </Card>
 
 
-      {/* Promotion History Section */}
-      {(completedPromotions.length > 0 || cancelledPromotions.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="w-6 h-6" />
-              Promotion History
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Completed Promotions */}
-            {completedPromotions.map((userPromotion) => (
-              <div key={userPromotion.id} className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {userPromotion.promotion?.name || 'Completed Promotion'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Bonus: ${userPromotion.bonus_amount.toFixed(2)} | 
-                    Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_requirement.toFixed(2)}
-                  </p>
-                </div>
-                <div className="text-right">
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-green-500 text-white">
-                        Completed
-                    </span>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {userPromotion.completed_at && new Date(userPromotion.completed_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-            
-            <Separator />
 
-            {/* Cancelled/Forfeited Promotions */}
-            {cancelledPromotions.map((userPromotion) => (
-                <div key={userPromotion.id} className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                    <h3 className="text-lg font-semibold">
-                        {userPromotion.promotion?.name || 'Cancelled Promotion'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        Bonus: ${userPromotion.bonus_amount.toFixed(2)} | 
-                        Wagered: ${userPromotion.wagering_progress.toFixed(2)} / ${userPromotion.wagering_requirement.toFixed(2)}
-                    </p>
-                    </div>
-                    <div className="text-right">
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-red-500 text-white">
-                        {userPromotion.status === 'cancelled' ? 'Cancelled' : 'Forfeited'}
-                    </span>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {userPromotion.forfeited_at && new Date(userPromotion.forfeited_at).toLocaleDateString()}
-                    </p>
-                    </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 } 
