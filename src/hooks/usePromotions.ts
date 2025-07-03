@@ -32,7 +32,7 @@ export interface UserPromotion {
   forfeited_at: string | null
   bonus_amount: number
   bonus_balance: number
-  wagering_required: number
+  wagering_requirement: number
   wagering_progress: number
   promotion: Promotion
 }
@@ -129,23 +129,31 @@ export function usePromotions(userId?: string) {
   const cancelPromotion = async (userPromotionId: string) => {
     setCancelling(userPromotionId)
     try {
-      const { error } = await supabase
-        .from('user_promotions')
-        .update({ 
-          status: 'cancelled', 
-          cancelled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userPromotionId)
+      // Use the new fund segregation cancellation endpoint
+      const response = await fetch('/api/promotions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (error) {
-        throw error
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to cancel promotion')
       }
 
-      // Refresh promotions
+      // Show detailed success message about fund segregation
+      toast.success(result.message, {
+        description: `Bonus funds lost: $${result.fundsLost?.toFixed(2) || 0}`
+      })
+
+      // Refresh promotions to show updated state
       await fetchPromotions()
     } catch (err) {
       console.error('Error cancelling promotion:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel promotion'
+      toast.error(errorMessage)
       throw err
     } finally {
       setCancelling(null)

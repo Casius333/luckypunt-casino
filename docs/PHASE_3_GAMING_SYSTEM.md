@@ -26,10 +26,10 @@ We've implemented a flexible, provider-agnostic gaming transaction system that c
    - Normalizes different provider formats into standard format
    - Supports Softmaya, test, and generic providers
 
-4. **Updated Coin Toss Game** (`src/app/api/games/coin-toss/play/route.ts`)
-   - Now uses the generic transaction system
+4. **Test Gaming Endpoints** (`src/app/api/gaming/test/route.ts`)
+   - Built-in test endpoint for development and testing
    - Demonstrates how internal games integrate with the system
-   - Maintains existing UI compatibility
+   - Supports all transaction types for validation
 
 ## Key Features
 
@@ -57,7 +57,7 @@ We've implemented a flexible, provider-agnostic gaming transaction system that c
 |-----------|------------------|----------|
 | Slots | 100% | Standard slot games |
 | Live Casino | 10% | Live dealer games |
-| Skill Games | 30% | Coin toss, poker variants |
+| Skill Games | 30% | Poker variants, skill-based games |
 | Table Games | 5% | RNG table games |
 | Sportsbook | 0% | Sports betting (optional) |
 
@@ -182,9 +182,9 @@ curl -X POST http://localhost:3333/api/gaming/test \
   -d '{"type":"balance","userId":"your-user-id"}'
 ```
 
-### Play Coin Toss
-The coin toss game now uses the generic system and will:
-- Process bets through the transaction system
+### Test Gaming System
+The test endpoints allow you to validate the system and will:
+- Process test transactions through the transaction system
 - Update wagering progress if you have an active promotion
 - Handle fund segregation properly
 - Complete promotions automatically when requirements are met
@@ -207,7 +207,7 @@ The coin toss game now uses the generic system and will:
 
 ## Notes
 
-- The coin toss game remains fully functional for testing bonus flows
+- Test endpoints provide comprehensive testing capabilities for bonus flows
 - All existing bonus logic continues to work unchanged
 - The system is ready for real gaming provider integration
 - Transaction safety and idempotency are built-in

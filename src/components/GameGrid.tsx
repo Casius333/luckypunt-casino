@@ -16,14 +16,6 @@ interface Game {
 
 const games: Game[] = [
   {
-    id: 'coin-toss',
-    title: 'Coin Toss',
-    provider: 'LuckyPunt',
-    isNew: true,
-    isHot: true,
-    category: 'table'
-  },
-  {
     id: 'sweet-bonanza',
     title: 'Sweet Bonanza',
     provider: 'Pragmatic Play',
@@ -190,20 +182,10 @@ export default function GameGrid({ category = 'all' }: GameGridProps) {
       {filteredGames.map((game) => (
         <div key={game.id} className="group relative">
           <div className="aspect-[4/3] relative rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
-            {game.id === 'coin-toss' ? (
-              // Special background for Coin Toss
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-600 to-yellow-400">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-yellow-300 border-4 border-yellow-200 shadow-lg flex items-center justify-center">
-                    <span className="text-lg sm:text-2xl font-bold text-yellow-800">$</span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4">
                 <Link
-                  href={game.id === 'coin-toss' ? '/games/coin-toss' : `/play/${game.id}`}
+                  href={`/play/${game.id}`}
                   className="flex items-center justify-center gap-2 w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-base min-w-[44px] min-h-[44px]"
                 >
                   <Play size={16} />

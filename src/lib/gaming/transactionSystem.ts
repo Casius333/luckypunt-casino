@@ -448,16 +448,6 @@ async function getGameWageringContribution(
   gameId: string, 
   betAmount: number
 ): Promise<WageringContribution | null> {
-  // For now, use our coin toss game as a test case
-  if (gameId === 'coin-toss') {
-    return {
-      gameType: 'skill',
-      betAmount,
-      contributionRate: DEFAULT_CONTRIBUTION_RATES.skill,
-      contributionAmount: betAmount * DEFAULT_CONTRIBUTION_RATES.skill
-    }
-  }
-
   // In the future, look up game type from database
   // const { data: game } = await supabase
   //   .from('games')

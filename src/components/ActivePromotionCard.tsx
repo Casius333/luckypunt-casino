@@ -48,13 +48,13 @@ export default function ActivePromotionCard({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   const progress =
-    userPromotion.wagering_required > 0
+    userPromotion.wagering_requirement > 0
       ? (userPromotion.wagering_progress /
-          userPromotion.wagering_required) *
+          userPromotion.wagering_requirement) *
         100
       : 0
 
-  const remainingWagering = userPromotion.wagering_required - userPromotion.wagering_progress
+  const remainingWagering = userPromotion.wagering_requirement - userPromotion.wagering_progress
 
   const handleCancel = async () => {
     await onCancel(userPromotion.id)
@@ -121,7 +121,7 @@ export default function ActivePromotionCard({
               <div className="text-right">
                 <span className="text-muted-foreground">Required:</span>
                 <div className="font-medium">
-                  ${userPromotion.wagering_required.toFixed(2)}
+                  ${userPromotion.wagering_requirement.toFixed(2)}
                 </div>
               </div>
             </div>
@@ -150,7 +150,12 @@ export default function ActivePromotionCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                Cancelling this promotion will forfeit your bonus funds and any winnings from them. This action cannot be undone.
+                Cancelling this promotion will forfeit:
+                <br />• All bonus funds received from this promotion
+                <br />• Any winnings earned during this promotion
+                <br />
+                <br />You will keep your original deposit and any remaining genuine funds.
+                <br />This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

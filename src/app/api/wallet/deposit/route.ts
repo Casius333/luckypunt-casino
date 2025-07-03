@@ -63,11 +63,12 @@ export async function POST(request: Request) {
     
     let walletUpdate
     if (hasActivePromotion) {
-      // If active promotion exists, add to locked balance
+      // If active promotion exists, preserve existing balance and add deposit to locked balance
+      const existingLockedBalance = wallet?.locked_balance || 0
       walletUpdate = {
         user_id: user.id,
-        balance: 0, // No withdrawable funds during promotion
-        locked_balance: (wallet?.locked_balance || 0) + numAmount,
+        balance: currentBalance, // PRESERVE existing balance, don't wipe it out!
+        locked_balance: existingLockedBalance + numAmount, // Add deposit to locked funds
         currency: wallet?.currency || 'AUD',
         updated_at: new Date().toISOString(),
         last_updated: new Date().toISOString()
@@ -184,34 +185,46 @@ export async function POST(request: Request) {
             wageringRequired
           })
 
-          // Update user_promotions
-          const { error: promoUpdateError } = await supabase
+          // Store original genuine balance for fund segregation
+          const originalGenuineBalance = currentBalance + numAmount // User's balance before bonus
+          
+          const { error: promotionError } = await supabase
             .from('user_promotions')
-            .update({
-              deposit_amount: numAmount,
+            .update({ 
               bonus_amount: bonusAmount,
-              bonus_balance: bonusAmount,
-              wagering_required: wageringRequired,
-              wagering_progress: 0,
-              updated_at: new Date().toISOString(),
-              last_updated: new Date().toISOString()
+              wagering_requirement: wageringRequired,
+              activated_at: new Date().toISOString(),
+              original_genuine_balance: originalGenuineBalance, // Track genuine funds for cancellation
+              updated_at: new Date().toISOString()
             })
-            .eq('id', depositPromo.id)
+            .eq('user_id', user.id)
+            .eq('status', 'active')
 
-          if (promoUpdateError) {
-            console.error('Promotion update error:', promoUpdateError)
+          if (promotionError) {
+            console.error('Promotion update error:', promotionError)
           } else {
             console.log('✅ Promotion updated with bonus')
           }
 
           // Add bonus to wallet with proper fund segregation
-          const totalLocked = newBalance + bonusAmount
+          // Calculate total locked funds: existing balance + deposit + bonus
+          const existingBalance = currentBalance
+          const depositAmount = numAmount
+          const totalLockedFunds = existingBalance + depositAmount + bonusAmount
+          
+          console.log('Final wallet update:', {
+            existingBalance,
+            depositAmount, 
+            bonusAmount,
+            totalLockedFunds
+          })
+          
           const { error: bonusWalletError } = await supabase
             .from('wallets')
             .update({ 
-              balance: 0, // No withdrawable funds during active promotion
+              balance: 0, // No withdrawable funds during active promotion (all funds locked)
               bonus_balance: bonusAmount, // Track bonus funds separately
-              locked_balance: totalLocked, // Lock all funds during promotion
+              locked_balance: totalLockedFunds, // Lock existing + deposit + bonus
               updated_at: new Date().toISOString(),
               last_updated: new Date().toISOString()
             })
@@ -220,7 +233,7 @@ export async function POST(request: Request) {
           if (bonusWalletError) {
             console.error('Bonus wallet update error:', bonusWalletError)
           } else {
-            console.log('✅ Bonus added to wallet. Total locked:', totalLocked)
+            console.log('✅ Bonus added to wallet. Total locked:', totalLockedFunds)
           }
 
           // Record bonus transaction

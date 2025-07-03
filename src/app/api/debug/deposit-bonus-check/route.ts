@@ -79,7 +79,7 @@ export async function GET() {
         status: dp.status,
         bonusAwarded: dp.bonus_awarded,
         bonusBalance: dp.bonus_balance,
-        wageringRequired: dp.wagering_required,
+        wageringRequired: dp.wagering_requirement,
         promotion: {
           id: dp.promotions?.id,
           name: dp.promotions?.name,

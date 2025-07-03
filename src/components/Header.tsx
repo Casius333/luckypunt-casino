@@ -11,6 +11,15 @@ import { showModal } from './ModalContainer'
 import { useWallet } from '@/hooks/useWallet'
 import { useUser } from '@/hooks/useUser'
 import ClientOnly from './ClientOnly'
+import AuthButton from './AuthButton'
+import { Button } from './ui/button'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from './ui/dropdown-menu'
+import { Menu } from 'lucide-react'
 
 export default function Header() {
   const router = useRouter()
@@ -67,6 +76,10 @@ export default function Header() {
 
   const handleCashierClick = () => {
     showModal('cashier')
+  }
+
+  const handleNavigation = (path: string) => {
+    router.push(path)
   }
 
   // Render logged-out UI if user is null (regardless of loading state)
@@ -164,6 +177,12 @@ export default function Header() {
                 </div>
               </Link>
               <div className="flex items-center gap-2">
+                <Link 
+                  href="/test-betting"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs"
+                >
+                  Test
+                </Link>
                 <button
                   onClick={handleCashierClick}
                   className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors cursor-pointer text-sm min-w-[44px] min-h-[44px]"
@@ -192,6 +211,12 @@ export default function Header() {
                   </Link>
                 </div>
                 <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end w-full md:w-auto mt-2 md:mt-0">
+                  <Link 
+                    href="/test-betting"
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs"
+                  >
+                    Test
+                  </Link>
                   <button
                     onClick={handleCashierClick}
                     className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-3 md:px-4 py-2 rounded-lg transition-colors cursor-pointer text-sm md:text-base min-w-[44px] min-h-[44px]"

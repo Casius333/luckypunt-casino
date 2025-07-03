@@ -63,7 +63,7 @@ export async function applyDepositBonus(userId: string, depositAmount: number) {
         deposit_amount: depositAmount,
         bonus_amount: bonusAmount,
         bonus_balance: bonusAmount,
-        wagering_required: wageringRequirement,
+        wagering_requirement: wageringRequirement,
         wagering_progress: 0,
         updated_at: new Date().toISOString()
       })

@@ -156,7 +156,7 @@ function normalizeSoftmayaCallback(body: any): NormalizedTransaction[] {
 }
 
 /**
- * Normalize test callback format (for our coin toss game)
+ * Normalize test callback format
  */
 function normalizeTestCallback(body: any): NormalizedTransaction[] {
   const { type, userId, gameId, amount, transactionId, sessionId } = body
@@ -165,7 +165,7 @@ function normalizeTestCallback(body: any): NormalizedTransaction[] {
     userId,
     sessionId: sessionId || `test_session_${Date.now()}`,
     provider: 'test',
-    gameId: gameId || 'coin-toss',
+    gameId: gameId || 'test-game',
     transactionId: transactionId || `test_${Date.now()}`,
     type,
     amount: parseFloat(amount) || 0,
