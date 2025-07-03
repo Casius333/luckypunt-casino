@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { activatePromotion as activatePromotionUtil } from '@/lib/promotionUtils'
 
 const supabase = createClient()
 
@@ -104,29 +105,22 @@ export function usePromotions(userId?: string) {
         throw new Error('User not authenticated')
       }
 
-      const { error } = await supabase
-        .from('user_promotions')
-        .insert({
-          user_id: user.id,
-          promotion_id: promotionId,
-          status: 'active',
-          activated_at: new Date().toISOString(),
-          bonus_amount: 0,
-          bonus_balance: 0,
-          wagering_required: 0,
-          wagering_progress: 0,
-          winnings_from_bonus: 0
-        })
-
-      if (error) {
-        throw error
+      // Use our promotionUtils function which includes single active promotion check
+      const result = await activatePromotionUtil(user.id, promotionId)
+      
+      if (!result.success) {
+        throw new Error(result.message)
       }
+
+      // Show success message
+      toast.success(result.message)
 
       // Refresh promotions
       await fetchPromotions()
     } catch (err) {
       console.error('Error activating promotion:', err)
-      throw err
+      const errorMessage = err instanceof Error ? err.message : 'Failed to activate promotion'
+      toast.error(errorMessage)
     } finally {
       setActivating(false)
     }

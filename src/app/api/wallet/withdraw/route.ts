@@ -23,6 +23,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }
 
+    // Check if user has any active promotions (block withdrawals during promotions)
+    const { data: activePromotions, error: promoError } = await supabase
+      .from('user_promotions')
+      .select('id, promotion:promotions(name)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (promoError) {
+      console.error('Error checking active promotions:', promoError)
+      return NextResponse.json({ error: 'Failed to check promotions' }, { status: 500 })
+    }
+
+    if (activePromotions && activePromotions.length > 0) {
+      return NextResponse.json({ 
+        error: 'Cannot withdraw while promotion is active. Please complete or cancel your active promotion first.' 
+      }, { status: 400 })
+    }
+
     // Check sufficient balance
     if (wallet.balance < amount) {
       return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })

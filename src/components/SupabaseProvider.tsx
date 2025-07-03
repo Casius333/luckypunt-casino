@@ -11,7 +11,7 @@ const SupabaseContext = createContext<{
 
 export function SupabaseProvider({ 
   children, 
-  session 
+  session: initialSession
 }: { 
   children: React.ReactNode
   session: Session | null 
@@ -23,14 +23,40 @@ export function SupabaseProvider({
     )
   )
 
+  const [session, setSession] = useState<Session | null>(initialSession)
+
   useEffect(() => {
     console.log('=== SUPABASE PROVIDER DEBUG ===')
-    console.log('Session:', session)
-    console.log('Session user:', session?.user)
+    console.log('Initial session:', initialSession)
+    console.log('Current session state:', session)
     console.log('Session valid:', !!session)
     console.log('Supabase client created:', !!supabase)
     console.log('=== END SUPABASE PROVIDER DEBUG ===')
-  }, [session, supabase]);
+
+    // Set the initial session
+    setSession(initialSession)
+
+    // Manually get the session once to ensure it's initialized
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log('=== MANUAL SESSION CHECK ===')
+      console.log('Current session from supabase.auth.getSession():', currentSession)
+      console.log('=== END MANUAL SESSION CHECK ===')
+      setSession(currentSession)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('=== SUPABASE PROVIDER AUTH STATE CHANGE ===')
+        console.log('Event:', event)
+        console.log('Session:', session)
+        console.log('=== END SUPABASE PROVIDER AUTH STATE CHANGE ===')
+        setSession(session)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth, initialSession])
 
   return (
     <SupabaseContext.Provider value={{ supabase, session }}>

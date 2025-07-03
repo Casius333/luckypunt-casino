@@ -15,6 +15,8 @@ interface DatabaseWallet {
   id: string
   user_id: string
   balance: number
+  locked_balance: number
+  bonus_balance: number
   currency: string
   created_at: string
 }
@@ -24,6 +26,7 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
   const [isDeposit, setIsDeposit] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  const [lockedBalance, setLockedBalance] = useState<number | null>(null)
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -43,7 +46,7 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
         // Initial balance fetch
         const { data: wallet, error: walletError } = await supabase
           .from('wallets')
-          .select('balance')
+          .select('balance, locked_balance, bonus_balance')
           .eq('user_id', user.id)
           .single()
 
@@ -54,7 +57,13 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
 
         if (wallet) {
           console.log('Setting initial balance:', wallet.balance)
-          setBalance(wallet.balance)
+          console.log('Setting initial locked balance:', wallet.locked_balance)
+          // Show total gambling funds as main balance
+          const totalGamblingFunds = (wallet.locked_balance && wallet.locked_balance > 0) 
+            ? wallet.locked_balance 
+            : wallet.balance
+          setBalance(totalGamblingFunds)
+          setLockedBalance(wallet.locked_balance || 0)
         }
       } catch (error) {
         console.error('Error in fetchBalance:', error)
@@ -184,6 +193,10 @@ export default function CashierModal({ isOpen, onClose, onSuccess }: CashierModa
           <div className="flex justify-between items-center mb-2 sm:mb-4">
             <div className="text-gray-400 text-xs sm:text-base">Current Balance:</div>
             <div className="font-medium text-sm sm:text-base">${balance?.toFixed(2) || '0.00'}</div>
+          </div>
+          <div className="text-xs text-gray-500 space-y-0.5 mb-2 sm:mb-4">
+            <div>Available Funds: ${(lockedBalance && lockedBalance > 0) ? '0.00' : (balance?.toFixed(2) || '0.00')}</div>
+            <div>Locked Funds: ${lockedBalance?.toFixed(2) || '0.00'}</div>
           </div>
           <div className="flex gap-2 mb-2 sm:mb-4">
             <button

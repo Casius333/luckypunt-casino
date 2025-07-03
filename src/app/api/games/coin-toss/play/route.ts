@@ -1,9 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { CoinSide } from '@/types/coin-toss'
+import { processGameTransaction } from '@/lib/gaming/transactionSystem'
+import { NormalizedTransaction } from '@/types/gaming'
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = cookies()
     const supabase = createServerSupabaseClient()
 
     const { betAmount, choice } = await request.json()
@@ -19,124 +23,132 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Get user's wallet with row-level locking
-    const { data: wallet, error: walletError } = await supabase
-      .from('wallets')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    // Generate unique transaction and session IDs
+    const sessionId = `coin_toss_${Date.now()}_${user.id.slice(0, 8)}`
+    const betTransactionId = `bet_${sessionId}`
+    const winTransactionId = `win_${sessionId}`
 
-    if (walletError || !wallet) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    // Create bet transaction
+    const betTransaction: NormalizedTransaction = {
+      userId: user.id,
+      sessionId,
+      provider: 'test',
+      gameId: 'coin-toss',
+      transactionId: betTransactionId,
+      type: 'bet',
+      amount: numAmount,
+      timestamp: new Date().toISOString(),
+      raw: { betAmount: numAmount, choice, gameType: 'coin-toss' }
     }
 
-    // Check sufficient balance
-    if (wallet.balance < numAmount) {
-      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
+    // Process the bet
+    console.log('Processing coin toss bet:', betTransaction)
+    const betResult = await processGameTransaction(betTransaction)
+    
+    if (!betResult.success) {
+      console.error('Bet processing failed:', betResult.error)
+      return NextResponse.json({ error: betResult.error }, { status: 400 })
     }
 
-    // First deduct the bet amount
-    const { error: deductError } = await supabase
-      .from('wallets')
-      .update({ 
-        balance: wallet.balance - numAmount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', wallet.id)
-      .eq('user_id', user.id)
-
-    if (deductError) {
-      return NextResponse.json({ error: 'Failed to place bet' }, { status: 500 })
-    }
+    console.log('Bet processed successfully, new balance:', betResult.newBalance)
 
     // Determine game result
     const result: CoinSide = Math.random() < 0.5 ? 'heads' : 'tails'
     const isWin = choice === result
     const payout = isWin ? numAmount * 2 : 0
 
-    // Create game session
+    console.log('Game result:', { result, choice, isWin, payout })
+
+    // Create game session record for tracking
     const { data: session, error: sessionError } = await supabase
       .from('coin_toss_sessions')
       .insert({
         player_id: user.id,
-        initial_balance: wallet.balance,
+        initial_balance: betResult.newBalance + numAmount, // Balance before bet
         status: 'active'
       })
       .select()
       .single()
 
     if (sessionError) {
-      return NextResponse.json({ error: 'Failed to create game session' }, { status: 500 })
+      console.error('Failed to create game session:', sessionError)
+      // Don't fail the game if session recording fails
     }
 
-    // Record the round
-    const { error: roundError } = await supabase
-      .from('coin_toss_rounds')
-      .insert({
-        session_id: session.id,
-        bet_amount: numAmount,
-        player_choice: choice,
-        result: result,
-        is_win: isWin,
-        payout_amount: payout,
-        player_balance_before: wallet.balance,
-        player_balance_after: isWin ? wallet.balance + payout : wallet.balance - numAmount
-      })
+    let finalBalance = betResult.newBalance
 
-    if (roundError) {
-      return NextResponse.json({ error: 'Failed to record game round' }, { status: 500 })
-    }
+    // If player won, process win transaction
+    if (isWin && payout > 0) {
+      const winTransaction: NormalizedTransaction = {
+        userId: user.id,
+        sessionId,
+        provider: 'test',
+        gameId: 'coin-toss',
+        transactionId: winTransactionId,
+        type: 'win',
+        amount: payout,
+        timestamp: new Date().toISOString(),
+        raw: { payout, result, choice, gameType: 'coin-toss' }
+      }
 
-    // If player won, add the payout
-    if (isWin) {
-      const { error: payoutError } = await supabase
-        .from('wallets')
-        .update({ 
-          balance: wallet.balance - numAmount + payout, // Deducted bet + payout
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', wallet.id)
-        .eq('user_id', user.id)
-
-      if (payoutError) {
-        return NextResponse.json({ error: 'Failed to process payout' }, { status: 500 })
+      console.log('Processing coin toss win:', winTransaction)
+      const winResult = await processGameTransaction(winTransaction)
+      
+      if (winResult.success) {
+        finalBalance = winResult.newBalance
+        console.log('Win processed successfully, final balance:', finalBalance)
+      } else {
+        console.error('Win processing failed:', winResult.error)
+        // Continue with the game even if win recording fails
       }
     }
 
-    // Get final wallet balance
-    const { data: finalWallet, error: finalWalletError } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('id', wallet.id)
-      .single()
+    // Record the round for game history
+    if (session) {
+      const { error: roundError } = await supabase
+        .from('coin_toss_rounds')
+        .insert({
+          session_id: session.id,
+          bet_amount: numAmount,
+          player_choice: choice,
+          result: result,
+          is_win: isWin,
+          payout_amount: payout,
+          player_balance_before: betResult.newBalance + numAmount,
+          player_balance_after: finalBalance
+        })
 
-    if (finalWalletError) {
-      return NextResponse.json({ error: 'Failed to get final balance' }, { status: 500 })
+      if (roundError) {
+        console.error('Failed to record game round:', roundError)
+        // Don't fail the game if round recording fails
+      }
+
+      // Update session stats
+      await supabase
+        .from('coin_toss_sessions')
+        .update({
+          total_bets: 1,
+          total_wins: isWin ? 1 : 0,
+          total_losses: isWin ? 0 : 1,
+          net_profit_loss: isWin ? payout - numAmount : -numAmount,
+          final_balance: finalBalance,
+          end_time: new Date().toISOString(),
+          status: 'completed'
+        })
+        .eq('id', session.id)
     }
-
-    // Update session stats
-    await supabase
-      .from('coin_toss_sessions')
-      .update({
-        total_bets: 1,
-        total_wins: isWin ? 1 : 0,
-        total_losses: isWin ? 0 : 1,
-        net_profit_loss: isWin ? payout - numAmount : -numAmount,
-        final_balance: finalWallet.balance,
-        end_time: new Date().toISOString(),
-        status: 'completed'
-      })
-      .eq('id', session.id)
 
     return NextResponse.json({
       success: true,
       result,
       isWin,
       payout,
-      newBalance: finalWallet.balance
+      newBalance: finalBalance,
+      wageringProgress: betResult.wageringProgress || 0
     })
+
   } catch (error) {
-    console.error('Game error:', error)
+    console.error('Coin toss game error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

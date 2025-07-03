@@ -2,42 +2,82 @@
 
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { useSupabase } from '@/components/SupabaseProvider';
+import { createBrowserClient } from '@supabase/ssr';
+
+// Create a single instance of the supabase client for the hook
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export function useUser() {
-    const { supabase, session } = useSupabase();
-    const [user, setUser] = useState<User | null>(session?.user ?? null);
-    const [loading, setLoading] = useState(!session);
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Set initial user from session
-        setUser(session?.user ?? null);
-        setLoading(!session);
+        let mounted = true;
+
+        // Get initial session
+        async function getInitialSession() {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('=== USEUSER INITIAL SESSION ===');
+                    console.log('Session:', session);
+                    console.log('Error:', error);
+                    console.log('User:', session?.user);
+                    console.log('=== END USEUSER INITIAL SESSION ===');
+                }
+
+                if (mounted) {
+                    setUser(session?.user ?? null);
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error('Error getting initial session:', error);
+                if (mounted) {
+                    setUser(null);
+                    setLoading(false);
+                }
+            }
+        }
+
+        getInitialSession();
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event: string, session: any) => {
-                setUser(session?.user ?? null);
-                setLoading(false);
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('=== USEUSER AUTH STATE CHANGE ===');
+                    console.log('Event:', event);
+                    console.log('New session:', session ? `User: ${session.user?.email}` : 'No session');
+                    console.log('=== END USEUSER AUTH STATE CHANGE ===');
+                }
+                
+                if (mounted) {
+                    setUser(session?.user ?? null);
+                    setLoading(false);
+                }
             }
         );
 
-        return () => subscription.unsubscribe();
-    }, [session, supabase.auth]);
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, []); // No dependencies needed
 
-    // Log session state changes only when they actually change
+    // Log user state changes only when they actually change
     useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
             console.log('=== USEUSER HOOK DEBUG ===')
-            console.log('Session:', session)
-            console.log('Session user:', session?.user)
-            console.log('Session valid:', !!session)
-            console.log('Current user state:', user)
+            console.log('Current user state:', user ? `User: ${user.email}` : 'No user')
             console.log('User valid:', !!user)
             console.log('Loading state:', loading)
             console.log('=== END USEUSER HOOK DEBUG ===')
         }
-    }, [session?.user?.id, user?.id, loading]);
+    }, [user?.id, loading]);
 
     return { user, loading };
 }

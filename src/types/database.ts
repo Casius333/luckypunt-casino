@@ -23,7 +23,7 @@ export interface Transaction {
   id: string
   user_id: string
   wallet_id: string
-  type: 'deposit' | 'withdraw' | 'bet' | 'win' | 'bonus'
+  type: 'deposit' | 'withdraw' | 'bet' | 'win' | 'bonus' | 'rollback' | 'bonus_completion' | 'deposit_bonus'
   amount: number
   currency: string
   status: 'pending' | 'completed' | 'failed' | 'cancelled'

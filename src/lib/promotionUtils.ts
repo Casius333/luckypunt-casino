@@ -227,7 +227,19 @@ export async function activatePromotion(userId: string, promotionId: string) {
       throw new Error('Promotion not found or inactive')
     }
 
-    // Check if user already has an active promotion of this type
+    // Check if user already has ANY active promotion (enforce single active promotion rule)
+    const { data: anyActivePromotion, error: activeCheckError } = await supabase
+      .from('user_promotions')
+      .select('id, promotion:promotions(name)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single()
+
+    if (anyActivePromotion) {
+      throw new Error('You already have an active bonus. Please complete or cancel it before activating another.')
+    }
+
+    // Check if user already has this specific promotion
     const { data: existingPromotion, error: existingError } = await supabase
       .from('user_promotions')
       .select('*')

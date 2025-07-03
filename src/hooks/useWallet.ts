@@ -11,8 +11,10 @@ export interface Wallet {
     id: string;
     user_id: string;
     balance: number;
+    locked_balance: number;
     bonus_balance: number;
-    created_at: string;
+    currency: string;
+    last_updated: string;
     updated_at: string;
 }
 
@@ -34,7 +36,7 @@ export function useWallet() {
     useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
             console.log('🛠️ useWallet: Wallet state changed:', {
-                wallet: wallet ? { id: wallet.id, balance: wallet.balance, bonus_balance: wallet.bonus_balance } : null,
+                wallet: wallet ? { id: wallet.id, balance: wallet.balance, locked_balance: wallet.locked_balance, bonus_balance: wallet.bonus_balance } : null,
                 loading,
                 error
             });
@@ -61,7 +63,7 @@ export function useWallet() {
             
             const { data, error } = await supabase
                 .from('wallets')
-                .select('*')
+                .select('id, user_id, balance, locked_balance, bonus_balance, currency, last_updated, updated_at')
                 .eq('user_id', user.id)
                 .single();
 
@@ -84,6 +86,7 @@ export function useWallet() {
                     console.log('✅ useWallet: Wallet fetched successfully:', {
                         id: data?.id,
                         balance: data?.balance,
+                        locked_balance: data?.locked_balance,
                         bonus_balance: data?.bonus_balance
                     });
                 }

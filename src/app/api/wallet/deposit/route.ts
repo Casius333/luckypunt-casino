@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     console.log('Fetching current wallet balance...')
     const { data: wallet, error: walletError } = await supabase
       .from('wallets')
-      .select('id, balance, currency')
+      .select('id, balance, currency, locked_balance, bonus_balance')
       .eq('user_id', user.id)
       .single()
 
@@ -42,17 +42,51 @@ export async function POST(request: Request) {
     const currentBalance = wallet?.balance || 0
     console.log('Current wallet balance:', currentBalance)
 
+    // Check if user has active promotions first
+    console.log('Checking for active promotions before wallet update...')
+    const { data: existingPromotions, error: promoCheckError } = await supabase
+      .from('user_promotions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (promoCheckError) {
+      console.error('Error checking active promotions:', promoCheckError)
+      return NextResponse.json({ error: 'Failed to check promotions' }, { status: 500 })
+    }
+
+    const hasActivePromotion = existingPromotions && existingPromotions.length > 0
+
     // Update wallet balance
     console.log('Updating wallet balance...')
     const newBalance = currentBalance + numAmount
-    const { error: updateError } = await supabase
-      .from('wallets')
-      .upsert({ 
+    
+    let walletUpdate
+    if (hasActivePromotion) {
+      // If active promotion exists, add to locked balance
+      walletUpdate = {
+        user_id: user.id,
+        balance: 0, // No withdrawable funds during promotion
+        locked_balance: (wallet?.locked_balance || 0) + numAmount,
+        currency: wallet?.currency || 'AUD',
+        updated_at: new Date().toISOString(),
+        last_updated: new Date().toISOString()
+      }
+    } else {
+      // No active promotion, normal deposit to balance
+      walletUpdate = {
         user_id: user.id, 
         balance: newBalance,
         currency: wallet?.currency || 'AUD',
         updated_at: new Date().toISOString(),
         last_updated: new Date().toISOString()
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('wallets')
+      .upsert(walletUpdate, { 
+        onConflict: 'user_id' 
       })
 
     if (updateError) {
@@ -170,12 +204,14 @@ export async function POST(request: Request) {
             console.log('✅ Promotion updated with bonus')
           }
 
-          // Add bonus to wallet
-          const finalBalance = newBalance + bonusAmount
+          // Add bonus to wallet with proper fund segregation
+          const totalLocked = newBalance + bonusAmount
           const { error: bonusWalletError } = await supabase
             .from('wallets')
             .update({ 
-              balance: finalBalance,
+              balance: 0, // No withdrawable funds during active promotion
+              bonus_balance: bonusAmount, // Track bonus funds separately
+              locked_balance: totalLocked, // Lock all funds during promotion
               updated_at: new Date().toISOString(),
               last_updated: new Date().toISOString()
             })
@@ -184,7 +220,7 @@ export async function POST(request: Request) {
           if (bonusWalletError) {
             console.error('Bonus wallet update error:', bonusWalletError)
           } else {
-            console.log('✅ Bonus added to wallet. Final balance:', finalBalance)
+            console.log('✅ Bonus added to wallet. Total locked:', totalLocked)
           }
 
           // Record bonus transaction
