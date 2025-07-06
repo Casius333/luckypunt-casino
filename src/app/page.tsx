@@ -79,7 +79,7 @@ export default function Home() {
       {/* Promotions Banner section */}
       <PromoBanner 
         bannerType={promoBannerType}
-        height="h-[119px]"
+        height="h-[101px]"
         autoRotate={true}
         rotationInterval={5000}
         showButton={true}

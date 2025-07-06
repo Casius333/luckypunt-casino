@@ -19,7 +19,7 @@ interface PromoBannerProps {
 
 export default function PromoBanner({
   bannerType = 'promotion-web',
-  height = 'h-[119px]',
+  height = 'h-[101px]',
   autoRotate = true,
   rotationInterval = 5000,
   className = '',
@@ -70,8 +70,8 @@ export default function PromoBanner({
   if (loading) {
     return (
       <section className={`bg-gray-600 ${height} flex items-center justify-between px-4 sm:px-8 mt-5 w-full animate-pulse ${className}`}>
-        <div className="bg-gray-500 h-8 w-32 rounded"></div>
-        <div className="bg-gray-500 h-10 w-24 rounded-lg"></div>
+        <div className="bg-gray-500 h-6 w-32 rounded"></div>
+        <div className="bg-gray-500 h-8 w-20 rounded-lg"></div>
       </section>
     )
   }
@@ -80,14 +80,14 @@ export default function PromoBanner({
   if (error || !banners || banners.length === 0) {
     return (
       <section className={`bg-red-400 ${height} flex items-center justify-between px-4 sm:px-8 mt-5 w-full ${className}`}>
-        <h2 className="text-2xl sm:text-4xl font-bold text-white">Special Promotions</h2>
+        <h2 className="text-xl sm:text-3xl font-bold text-white">Special Promotions</h2>
         {showButton && (
           <Link 
             href={buttonLink}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 sm:px-5 py-2 rounded-lg transition-colors text-sm sm:text-base"
           >
             <span>{buttonText}</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </Link>
         )}
       </section>
@@ -123,24 +123,24 @@ export default function PromoBanner({
             {/* Overlay for better text readability */}
             <div className="absolute inset-0 bg-black/30" />
             
-            {/* Content overlay */}
-            <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8">
-              <div className="text-white">
-                <h2 className="text-2xl sm:text-4xl font-bold drop-shadow-lg">
-                  Promotion {index + 1}
-                </h2>
-              </div>
-              
-              {showButton && (
-                <Link 
-                  href={buttonLink}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors backdrop-blur-sm"
-                >
-                  <span>{buttonText}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              )}
-            </div>
+                         {/* Content overlay */}
+             <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8">
+               <div className="text-white">
+                 <h2 className="text-xl sm:text-3xl font-bold drop-shadow-lg">
+                   Promotion {index + 1}
+                 </h2>
+               </div>
+               
+               {showButton && (
+                 <Link 
+                   href={buttonLink}
+                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 sm:px-5 py-2 rounded-lg transition-colors backdrop-blur-sm text-sm sm:text-base"
+                 >
+                   <span>{buttonText}</span>
+                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                 </Link>
+               )}
+             </div>
           </div>
         </div>
       ))}
