@@ -96,12 +96,30 @@ export default function BannerCarousel({
   return (
     <section className={`relative ${height} w-full ${className}`}>
       {/* Banner slides */}
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full bg-gray-900">
+        {/* Background slide - always visible */}
+        {banners.length > 0 && (
+          <div className="absolute inset-0 z-0">
+            <Image
+              src={getImageUrl(banners[currentBanner])}
+              alt="Background"
+              fill
+              className="object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = '/placeholder-banner.svg'
+              }}
+            />
+            <div className="absolute inset-0 bg-black/20" />
+          </div>
+        )}
+        
+        {/* Foreground slides with crossfade */}
         {banners.map((banner, index) => (
           <div
-            key={banner.id}
-            className={`absolute inset-0 transition-opacity duration-500 ${
-              index === currentBanner ? 'opacity-100' : 'opacity-0'
+            key={`${banner.id}-${index}`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === currentBanner ? 'opacity-100 z-10' : 'opacity-0 z-5'
             }`}
           >
             <Image
