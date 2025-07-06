@@ -1,102 +1,162 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { ArrowRight } from 'lucide-react'
+import { useBanners, Banner } from '@/hooks/useBanners'
 
-interface Promotion {
-  id: number
-  title: string
-  description: string
-  bgColor: string
-  buttonText: string
-  buttonLink: string
+interface PromoBannerProps {
+  bannerType?: string
+  height?: string
+  autoRotate?: boolean
+  rotationInterval?: number
+  className?: string
+  showButton?: boolean
+  buttonText?: string
+  buttonLink?: string
 }
 
-const promotions: Promotion[] = [
-  {
-    id: 1,
-    title: 'Daily Deposit Bonus',
-    description: 'Get 100% bonus on your next deposit!',
-    bgColor: 'bg-purple-600',
-    buttonText: 'View Promotions',
-    buttonLink: '/promotions'
-  },
-  {
-    id: 2,
-    title: 'Weekly Cashback',
-    description: 'Earn up to 10% cashback on your weekly losses',
-    bgColor: 'bg-blue-600',
-    buttonText: 'Learn More',
-    buttonLink: '/promotions/cashback'
-  },
-  // Add more promotions as needed
-]
-
-export default function PromoBanner() {
+export default function PromoBanner({
+  bannerType = 'promotion-web',
+  height = 'h-[119px]',
+  autoRotate = true,
+  rotationInterval = 5000,
+  className = '',
+  showButton = true,
+  buttonText = 'View Promotions',
+  buttonLink = '/promotions'
+}: PromoBannerProps) {
+  const { banners, loading, error } = useBanners(bannerType, true)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
 
+  // Detect mobile viewport
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % promotions.length)
-    }, 5000)
-
-    return () => clearInterval(timer)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % promotions.length)
+  // Auto-rotation effect
+  useEffect(() => {
+    if (!autoRotate || banners.length <= 1) return
+
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length)
+    }, rotationInterval)
+
+    return () => clearInterval(timer)
+  }, [autoRotate, banners.length, rotationInterval])
+
+  // Reset current slide when banners change
+  useEffect(() => {
+    setCurrentSlide(0)
+  }, [banners])
+
+  // Get appropriate image URL based on screen size
+  const getImageUrl = (banner: Banner): string => {
+    if (isMobile && banner.mobile_image_url) {
+      return banner.mobile_image_url
+    }
+    return banner.image_url || '/placeholder-promotion.svg'
   }
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + promotions.length) % promotions.length)
+  // Loading state
+  if (loading) {
+    return (
+      <section className={`bg-gray-600 ${height} flex items-center justify-between px-4 sm:px-8 mt-5 w-full animate-pulse ${className}`}>
+        <div className="bg-gray-500 h-8 w-32 rounded"></div>
+        <div className="bg-gray-500 h-10 w-24 rounded-lg"></div>
+      </section>
+    )
+  }
+
+  // Error state or no banners - show fallback
+  if (error || !banners || banners.length === 0) {
+    return (
+      <section className={`bg-red-400 ${height} flex items-center justify-between px-4 sm:px-8 mt-5 w-full ${className}`}>
+        <h2 className="text-2xl sm:text-4xl font-bold text-white">Special Promotions</h2>
+        {showButton && (
+          <Link 
+            href={buttonLink}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors"
+          >
+            <span>{buttonText}</span>
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        )}
+      </section>
+    )
   }
 
   return (
-    <div className="relative w-full h-[140px] sm:h-[200px] overflow-hidden rounded-lg">
-      {promotions.map((promo, index) => (
+    <section className={`relative ${height} mt-5 w-full overflow-hidden ${className}`}>
+      {/* Banner slides */}
+      {banners.map((banner, index) => (
         <div
-          key={promo.id}
-          className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
-            index === currentSlide ? 'translate-x-0' : 'translate-x-full'
-          } ${promo.bgColor}`}
+          key={banner.id}
+          className={`absolute inset-0 transition-opacity duration-500 ${
+            index === currentSlide ? 'opacity-100' : 'opacity-0'
+          }`}
         >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between h-full px-4 sm:px-8 py-4 sm:py-0 w-full">
-            <div className="space-y-1 sm:space-y-2">
-              <h2 className="text-lg sm:text-2xl font-bold text-white">{promo.title}</h2>
-              <p className="text-xs sm:text-base text-white/80 max-w-xs sm:max-w-none">{promo.description}</p>
-              <button className="mt-2 sm:mt-4 px-4 sm:px-6 py-2 bg-white text-purple-600 rounded-lg hover:bg-white/90 transition-colors text-xs sm:text-base min-w-[44px] min-h-[44px]">
-                {promo.buttonText}
-              </button>
+          <div className="relative h-full w-full">
+            <Image
+              src={getImageUrl(banner)}
+              alt={`Promotion ${index + 1}`}
+              fill
+              className="object-cover"
+              priority={index === 0}
+              sizes="(max-width: 768px) 100vw, 1200px"
+                             onError={(e) => {
+                 const target = e.target as HTMLImageElement
+                 target.src = '/placeholder-promotion.svg'
+               }}
+            />
+            {/* Overlay for better text readability */}
+            <div className="absolute inset-0 bg-black/30" />
+            
+            {/* Content overlay */}
+            <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8">
+              <div className="text-white">
+                <h2 className="text-2xl sm:text-4xl font-bold drop-shadow-lg">
+                  Promotion {index + 1}
+                </h2>
+              </div>
+              
+              {showButton && (
+                <Link 
+                  href={buttonLink}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors backdrop-blur-sm"
+                >
+                  <span>{buttonText}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              )}
             </div>
           </div>
         </div>
       ))}
 
-      <button
-        onClick={prevSlide}
-        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors min-w-[44px] min-h-[44px]"
-      >
-        <ChevronLeft size={20} />
-      </button>
-
-      <button
-        onClick={nextSlide}
-        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors min-w-[44px] min-h-[44px]"
-      >
-        <ChevronRight size={20} />
-      </button>
-
-      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-        {promotions.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              index === currentSlide ? 'bg-white' : 'bg-white/40'
-            }`}
-          />
-        ))}
-      </div>
-    </div>
+      {/* Dots indicator (only if multiple banners) */}
+      {banners.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                index === currentSlide ? 'bg-white' : 'bg-white/40'
+              }`}
+              aria-label={`Go to promotion ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   )
 } 
