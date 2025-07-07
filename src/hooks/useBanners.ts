@@ -1,9 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-
-const supabase = createClient()
 
 export interface Banner {
   id: string
@@ -27,12 +24,7 @@ export function useBanners(bannerType?: string, activeOnly: boolean = true) {
       setLoading(true)
       setError(null)
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setBanners([])
-        setLoading(false)
-        return
-      }
+      // Note: Banners are public content, no authentication required
 
       // Build query parameters
       const params = new URLSearchParams()

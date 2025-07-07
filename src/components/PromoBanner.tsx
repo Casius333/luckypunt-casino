@@ -19,7 +19,7 @@ interface PromoBannerProps {
 
 export default function PromoBanner({
   bannerType = 'promotion-web',
-  height = 'h-[101px]',
+  height = 'h-[100px]',
   autoRotate = true,
   rotationInterval = 5000,
   className = '',

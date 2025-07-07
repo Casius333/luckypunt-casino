@@ -8,17 +8,8 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
 
-    // Get authenticated user
-    console.log('Getting authenticated user...')
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('Auth result:', { user: user?.id, error: authError })
-    
-    if (authError || !user) {
-      console.error('Authentication failed:', authError)
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    console.log('✅ User authenticated:', user.id)
+    // Note: Banners are public content, no authentication required
+    console.log('Fetching public banners...')
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
