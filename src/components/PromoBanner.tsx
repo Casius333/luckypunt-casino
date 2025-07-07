@@ -124,13 +124,7 @@ export default function PromoBanner({
             <div className="absolute inset-0 bg-black/30" />
             
                          {/* Content overlay */}
-             <div className="absolute inset-0 flex items-center justify-between px-4 sm:px-8">
-               <div className="text-white">
-                 <h2 className="text-xl sm:text-3xl font-bold drop-shadow-lg">
-                   Promotion {index + 1}
-                 </h2>
-               </div>
-               
+             <div className="absolute inset-0 flex items-center justify-end px-4 sm:px-8">
                {showButton && (
                  <Link 
                    href={buttonLink}
