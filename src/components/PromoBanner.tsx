@@ -120,8 +120,6 @@ export default function PromoBanner({
                  target.src = '/placeholder-promotion.svg'
                }}
             />
-            {/* Overlay for better text readability */}
-            <div className="absolute inset-0 bg-black/30" />
             
                          {/* Content overlay */}
              <div className="absolute inset-0 flex items-center justify-end px-4 sm:px-8">

@@ -110,7 +110,6 @@ export default function BannerCarousel({
                 target.src = '/placeholder-banner.svg'
               }}
             />
-            <div className="absolute inset-0 bg-black/20" />
           </div>
         )}
         
@@ -135,8 +134,6 @@ export default function BannerCarousel({
                 target.src = '/placeholder-banner.svg'
               }}
             />
-            {/* Overlay for better text readability if needed */}
-            <div className="absolute inset-0 bg-black/20" />
           </div>
         ))}
       </div>
