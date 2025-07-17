@@ -29,10 +29,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('banner_id', bannerType)
     }
 
-    // Filter by active status if requested
-    if (activeOnly) {
-      query = query.eq('is_active', true)
-    }
+    // Filter by active status if requested (temporarily disabled - column missing)
+    // TODO: Re-enable when is_active column is added to banner_images table
+    // if (activeOnly) {
+    //   query = query.eq('is_active', true)
+    // }
 
     // For promotional banners, filter by current day of week
     if (bannerType?.includes('promotion')) {
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest) {
       console.log(`Filtering promotional banners for day: ${currentDay}`)
       
       // Filter by schedule_days column (JSONB array) and only include day-scheduled banners
-      query = query
-        .contains('schedule_days', `["${currentDay}"]`)
-        .eq('is_day_scheduled', true)
+      // TODO: Re-enable is_day_scheduled filter when column exists
+      query = query.contains('schedule_days', `["${currentDay}"]`)
+      // .eq('is_day_scheduled', true)
     }
 
     console.log('Fetching banners...')
