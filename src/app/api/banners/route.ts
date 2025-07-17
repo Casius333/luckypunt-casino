@@ -34,6 +34,19 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_active', true)
     }
 
+    // For promotional banners, filter by current day of week
+    if (bannerType?.includes('promotion')) {
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const currentDay = dayNames[new Date().getDay()]
+      
+      console.log(`Filtering promotional banners for day: ${currentDay}`)
+      
+      // Filter by schedule_days column (JSONB array) and only include day-scheduled banners
+      query = query
+        .contains('schedule_days', `["${currentDay}"]`)
+        .eq('is_day_scheduled', true)
+    }
+
     console.log('Fetching banners...')
     const { data: banners, error: bannersError } = await query
 
