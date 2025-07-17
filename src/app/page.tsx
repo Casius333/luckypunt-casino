@@ -5,50 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Gamepad2, Dice1, PlaySquare, Trophy, ArrowRight } from 'lucide-react'
 import GameGrid from '@/components/GameGrid'
+import BannerCarousel from '@/components/BannerCarousel'
+import PromoBanner from '@/components/PromoBanner'
 import Image from 'next/image'
-
-interface Promotion {
-  id: number
-  title: string
-  bgColor: string
-}
-
-interface Banner {
-  id: number
-  title: string
-  bgColor: string
-}
-
-const promotions: Promotion[] = [
-  {
-    id: 1,
-    title: "Promotion 1",
-    bgColor: "from-red-400 to-red-300"
-  },
-  {
-    id: 2,
-    title: "Promotion 2",
-    bgColor: "from-red-400 to-red-300"
-  }
-]
-
-const banners: Banner[] = [
-  {
-    id: 1,
-    title: "Banner 1",
-    bgColor: "bg-emerald-500"
-  },
-  {
-    id: 2,
-    title: "Banner 1",
-    bgColor: "bg-blue-500"
-  },
-  {
-    id: 3,
-    title: "Banner 1",
-    bgColor: "bg-purple-500"
-  }
-]
 
 const games = [
   { id: 1, title: 'ROULETTE', category: 'table' },
@@ -77,84 +36,56 @@ const categories = [
 ]
 
 export default function Home() {
-  const [currentSlide, setCurrentSlide] = useState(0)
   const [activeCategory, setActiveCategory] = useState('all')
-  const [currentBanner, setCurrentBanner] = useState(0)
-  const [currentPromotion, setCurrentPromotion] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
 
+  // Detect mobile viewport
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % banners.length)
-    }, 4000) // Rotate every 4 seconds
-
-    return () => clearInterval(timer)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % promotions.length)
-  }
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + promotions.length) % promotions.length)
-  }
 
   const filteredGames = activeCategory === 'all' 
     ? games 
     : games.filter(game => game.category === activeCategory)
 
-  const nextBanner = () => {
-    setCurrentBanner((prev) => (prev + 1) % banners.length)
-  }
-
-  const prevBanner = () => {
-    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
-  }
+  // Determine banner types based on screen size
+  const mainBannerType = isMobile ? 'main-mobile' : 'main-web'
+  const promoBannerType = isMobile ? 'promotion-mobile' : 'promotion-web'
 
   return (
     <main className="w-full max-w-screen-xl mx-auto px-4 sm:px-6">
-      {/* Banner section */}
-      <section className="relative h-[225px] w-full">
-        {/* Banner slides */}
-        <div className="relative h-full w-full">
-          {banners.map((banner, index) => (
-            <div
-              key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 flex items-center px-4 sm:px-8 ${banner.bgColor} ${
-                index === currentBanner ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              <h2 className="text-4xl sm:text-6xl font-bold text-white">{banner.title}</h2>
-            </div>
-          ))}
-        </div>
+      {/* Main Banner section */}
+      <BannerCarousel 
+        bannerType={mainBannerType}
+        height="h-[225px]"
+        autoRotate={true}
+        rotationInterval={4000}
+        showDots={true}
+        fallbackContent={
+          <div className="relative h-full w-full bg-emerald-500 flex items-center px-4 sm:px-8">
+            <h2 className="text-4xl sm:text-6xl font-bold text-white">Banner 1</h2>
+          </div>
+        }
+      />
 
-        {/* Dots indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {banners.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentBanner(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentBanner ? 'bg-white' : 'bg-white/40'
-              }`}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Promotions section */}
-      <section className="bg-red-400 h-[119px] flex items-center justify-between px-4 sm:px-8 mt-5 w-full">
-        <h2 className="text-2xl sm:text-4xl font-bold text-white">Promotion 1</h2>
-        <Link 
-          href="/promotions" 
-          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-lg transition-colors"
-        >
-          <span>View Promotions</span>
-          <ArrowRight className="w-5 h-5" />
-        </Link>
-      </section>
+      {/* Promotions Banner section */}
+      <PromoBanner 
+        bannerType={promoBannerType}
+        height="h-[101px]"
+        autoRotate={true}
+        rotationInterval={5000}
+        showButton={true}
+        buttonText="View Promotions"
+        buttonLink="/promotions"
+      />
 
       {/* Games section */}
       <section className="mt-8 w-full">

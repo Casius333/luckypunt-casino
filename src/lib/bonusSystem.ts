@@ -5,7 +5,7 @@ export interface Promotion {
   name: string;
   description: string;
   type: 'deposit_bonus' | 'no_deposit_bonus' | 'free_spins' | 'cashback';
-  bonus_percentage: number;
+  bonus_percent: number;
   max_bonus_amount: number;
   min_deposit_amount: number;
   wagering_requirement: number;
@@ -131,7 +131,7 @@ export async function activatePromotion(userId: string, promotionId: string, dep
   let bonusAmount = 0;
   if (promotion.type === 'deposit_bonus' && depositAmount) {
     bonusAmount = Math.min(
-      (depositAmount * promotion.bonus_percentage) / 100,
+      (depositAmount * promotion.bonus_percent) / 100,
       promotion.max_bonus_amount
     );
   } else if (promotion.type === 'no_deposit_bonus') {
