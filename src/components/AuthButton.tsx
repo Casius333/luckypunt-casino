@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function AuthButton() {
@@ -9,7 +9,7 @@ export default function AuthButton() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createPagesBrowserClient()
+  const supabase = createClient()
   const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
