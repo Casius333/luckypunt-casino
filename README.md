@@ -24,7 +24,7 @@ A Next.js application with Supabase integration.
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3333
 ```
 
 2. Replace the placeholder values with your actual Supabase credentials.
@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. Open [http://localhost:3333](http://localhost:3333) in your browser.
 
 ## Deployment to DigitalOcean
 
